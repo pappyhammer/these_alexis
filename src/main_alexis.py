@@ -6,6 +6,11 @@ import random
 from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
 from asthma_entry import AsthmaEntry
 
+
+def sandbox(path_results):
+    print("Hello world")
+
+
 def main():
     path_results_alexis = "C:/Users/Utilisateur/Desktop/figures_code"
     path_results_julien = "/Users/pappyhammer/Documents/academique/python_code_output/urg_ped"
@@ -29,68 +34,73 @@ def main():
 
     print("hy world, this is Julien")
 
-    save_formats = "png"
+    run_sandbox = True
 
-    test_list_1 = [random.randint(0, 15) for i in range(100)]
-    test_list_2 = [random.randint(0, 15) for i in range(100)]
+    if run_sandbox:
+        sandbox(path_results=path_results)
+    else:
+        save_formats = "png"
 
-    data_dict = dict()
-    data_dict["Age 1"] = test_list_1
-    data_dict["Age 2"] = test_list_2
+        test_list_1 = [random.randint(0, 15) for i in range(100)]
+        test_list_2 = [random.randint(0, 15) for i in range(100)]
 
-    colors = BREWER_COLORS
+        data_dict = dict()
+        data_dict["Age 1"] = test_list_1
+        data_dict["Age 2"] = test_list_2
 
-    filename = "box_plot_age"
+        colors = BREWER_COLORS
 
-    plot_box_plots(data_dict=data_dict, filename=filename,
-                   y_label="Age (années)",
-                   box_in_front=True,
-                   ordered_labels=list(data_dict.keys()),
-                   scatter_text_dict=None,
-                   colors=colors,
-                   path_results=path_results, y_lim=None,
-                   x_label=None, with_scatters=True,
-                   xticklabels_dict=None,
-                   y_log=False,
-                   scatters_with_same_colors=None,
-                   special_scatters=None,
-                   scatter_size=20,
-                   scatter_alpha=0.5,
-                   box_alpha=0.8,
-                   h_lines_y_values=None,
-                   h_lines_colors=None,
-                   h_lines_styles="dashed",
-                   n_sessions_dict=None,
-                   y_ticks_locations=None,
-                   y_ticks_labels=None,
-                   median_color=None,
-                   background_color="black",
-                   link_medians=None,
-                   link_means=None,
-                   link_data_points=None,
-                   color_link_medians="red",
-                   color_link_data_point="red",
-                   labels_color="white",
-                   with_y_jitter=None,
-                   x_labels_rotation=45,
-                   fliers_symbol=None,
-                   save_formats=save_formats,
-                   dpi=500,
-                   xkcd_mode=False,
-                   with_timestamp_in_file_name=True)
+        filename = "box_plot_age"
 
-    data_dict = dict()
-    data_dict["Plan d'action respecté"] = 25
-    data_dict["Plan d'action non respecté"] = 92
+        plot_box_plots(data_dict=data_dict, filename=filename,
+                       y_label="Age (années)",
+                       box_in_front=True,
+                       ordered_labels=list(data_dict.keys()),
+                       scatter_text_dict=None,
+                       colors=colors,
+                       path_results=path_results, y_lim=None,
+                       x_label=None, with_scatters=True,
+                       xticklabels_dict=None,
+                       y_log=False,
+                       scatters_with_same_colors=None,
+                       special_scatters=None,
+                       scatter_size=20,
+                       scatter_alpha=0.5,
+                       box_alpha=0.8,
+                       h_lines_y_values=None,
+                       h_lines_colors=None,
+                       h_lines_styles="dashed",
+                       n_sessions_dict=None,
+                       y_ticks_locations=None,
+                       y_ticks_labels=None,
+                       median_color=None,
+                       background_color="black",
+                       link_medians=None,
+                       link_means=None,
+                       link_data_points=None,
+                       color_link_medians="red",
+                       color_link_data_point="red",
+                       labels_color="white",
+                       with_y_jitter=None,
+                       x_labels_rotation=45,
+                       fliers_symbol=None,
+                       save_formats=save_formats,
+                       dpi=500,
+                       xkcd_mode=False,
+                       with_timestamp_in_file_name=True)
 
-    background_color = "white"
+        data_dict = dict()
+        data_dict["Plan d'action respecté"] = 25
+        data_dict["Plan d'action non respecté"] = 92
 
-    filename = "plan_action_pie"
-    label_data = "plan_action"
-    plot_pie_chart(data_dict=data_dict, label_data=label_data,
-                   path_results=path_results, filename=filename,
-                   background_color=background_color,
-                   color_discrete_map=None,
-                   save_formats=save_formats)
+        background_color = "white"
+
+        filename = "plan_action_pie"
+        label_data = "plan_action"
+        plot_pie_chart(data_dict=data_dict, label_data=label_data,
+                       path_results=path_results, filename=filename,
+                       background_color=background_color,
+                       color_discrete_map=None,
+                       save_formats=save_formats)
 
 
