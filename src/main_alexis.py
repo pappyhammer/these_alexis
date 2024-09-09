@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 import random
 from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
-
+from asthma_entry import AsthmaEntry
 
 def main():
     path_results_alexis = ""
@@ -94,6 +94,3 @@ def main():
                    save_formats=save_formats)
 
 
-if __name__ == '__main__':
-    # Execute when the module is not initialized from an import statement.
-    main()
