@@ -7,7 +7,7 @@ from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
 from asthma_entry import AsthmaEntry
 
 def main():
-    path_results_alexis = ""
+    path_results_alexis = "C:/Users/Utilisateur/Desktop/figures_code"
     path_results_julien = "/Users/pappyhammer/Documents/academique/python_code_output/urg_ped"
 
     if platform == "win32":
@@ -27,7 +27,7 @@ def main():
     else:
         path_data = path_data_julien
 
-    print("Hello world")
+    print("hy world")
 
     save_formats = "png"
 
