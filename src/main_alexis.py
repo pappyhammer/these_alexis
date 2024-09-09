@@ -27,7 +27,7 @@ def main():
     else:
         path_data = path_data_julien
 
-    print("hy world")
+    print("hy world, this is Julien")
 
     save_formats = "png"
 
