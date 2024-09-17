@@ -204,7 +204,8 @@ def create_table1(asthma_entries, path_results):
 
         #median_age=np.median(ages)
         #print(f"median {label_ages}: {median_age:.2f}")
-        print()
+        print(
+
 
 
 
