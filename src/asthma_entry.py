@@ -345,7 +345,7 @@ def from_csv_to_asthma_entries(csv_file):
     # map the content title of the column to the name of the column in the csv
     fields_map = get_fields_map(df)
 
-    df[fields_map["arrival_date"]] = pd.to_datetime(df[fields_map["arrival_date"]], dayfirst=True)
+   # df[fields_map["arrival_date"]] = pd.to_datetime(df[fields_map["arrival_date"]], dayfirst=True)
     asthma_entries = list()
     for n, pd_series in df.iterrows():
         asthma_entry = AsthmaEntry(entry=None, pd_series=pd_series, fields_map=fields_map, entries_by_ipp=None)

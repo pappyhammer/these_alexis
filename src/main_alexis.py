@@ -144,11 +144,11 @@ def main():
     os.mkdir(path_results)
 
     path_data_julien = "/Users/pappyhammer/Documents/academique/python_code_output/alexis"
-    path_data_alexis = ""
+    path_data_alexis = "C:/Users/Utilisateur/Desktop/donnes_these"
 
     if platform == "win32":
         path_data = path_data_alexis
-        database_csv_file = None
+        database_csv_file = os.path.join(path_data,"recueil_alexis_auto_fill.csv")
     else:
         path_data = path_data_julien
         database_csv_file = os.path.join(path_data, "auto_fill", "recueil_alexis_auto_fill.csv")
@@ -157,11 +157,54 @@ def main():
 
     asthma_entries = from_csv_to_asthma_entries(csv_file=database_csv_file)
 
-    run_sandbox = False
+    if False:
+        run_sandbox = False
 
-    if run_sandbox:
-        sandbox(path_results=path_results)
-    else:
-        run_exemples(path_results=path_results, asthma_entries=asthma_entries)
+        if run_sandbox:
+            sandbox(path_results=path_results)
+        else:
+            run_exemples(path_results=path_results, asthma_entries=asthma_entries)
+
+    create_table1(asthma_entries=asthma_entries, path_results=path_results)
+
+
+def create_table1(asthma_entries, path_results):
+    ages_inf_6=list()
+    ages_sup_6=list()
+
+    ages_dict = dict()
+    ages_dict["Age < 6 ans"] = list()
+    ages_dict["Age >= 6 ans"] = list()
+    ages_dict["Ages"] = list()
+
+    for entry in asthma_entries:
+        ages_dict["Ages"].append(entry.age_years_float)
+        if entry.age_years_float<6:
+            ages_dict["Age < 6 ans"].append(entry.age_years_float)
+        else:
+            ages_dict["Age >= 6 ans"].append(entry.age_years_float)
+
+
+    #all_ages = ages_inf_6+ages_sup_6
+    #all_ages = [entry.age_years_float for entry in asthma_entries]
+
+    simple_fct_dict = {"moyenne": np.mean, "std": np.std, "median": np.median, "min": np.min, "max": np.max}
+
+    for label_ages, ages in ages_dict.items():
+        print(f"- N {label_ages}: {len(ages)} passes")
+        for fonction_name, fct in simple_fct_dict.items():
+            result_fct = fct(ages)
+            print(f"{fonction_name} {label_ages}: {result_fct:.2f}")
+
+        perc_25 = np.percentile(ages, 25)
+        perc_75 = np.percentile(ages, 75)
+        print(f"Percentile 25: {perc_25:.2f}, 75: {perc_75:.2f}")
+        #mean_ages = np.mean(ages)
+        #print(f"moyenne {label_ages}: {mean_ages:.2f}")
+
+        #median_age=np.median(ages)
+        #print(f"median {label_ages}: {median_age:.2f}")
+        print()
+
 
 
