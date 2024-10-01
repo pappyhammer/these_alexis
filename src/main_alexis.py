@@ -7,6 +7,7 @@ import random
 from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
 from asthma_entry import from_csv_to_asthma_entries
 from utils import sort_two_list
+from code_alexis import table_1_alexis
 
 
 def count_boolean_attr_in_entries(entries, attr_name):
@@ -165,7 +166,8 @@ def main():
         else:
             run_exemples(path_results=path_results, asthma_entries=asthma_entries)
 
-    create_table1(asthma_entries=asthma_entries, path_results=path_results)
+    table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
+    # create_table1(asthma_entries=asthma_entries, path_results=path_results)
 
 
 def create_table1(asthma_entries, path_results):
