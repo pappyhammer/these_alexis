@@ -684,6 +684,8 @@ class AsthmaEntry(AutoEntry):
         self.n_passages_urgences_asthme = pd_series[fields_map["n_passages_urgences_asthme"]]
         self.set_int_attr('n_passages_urgences_asthme')
 
+        # TODO: ajout sao2_iao, n_nebu_salbu	n_nebu_atrovent	cortico_urgences
+
         self.atcd_dechoc = pd_series[fields_map["atcd_dechoc"]]
         self.set_bool_attr('atcd_dechoc')
 

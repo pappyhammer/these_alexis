@@ -158,7 +158,7 @@ def main():
 
     asthma_entries = from_csv_to_asthma_entries(csv_file=database_csv_file)
 
-    if False:
+    if True:
         run_sandbox = False
 
         if run_sandbox:
@@ -181,7 +181,7 @@ def create_table1(asthma_entries, path_results):
 
     for entry in asthma_entries:
         ages_dict["Ages"].append(entry.age_years_float)
-        if entry.age_years_float<6:
+        if entry.age_years_float < 6:
             ages_dict["Age < 6 ans"].append(entry.age_years_float)
         else:
             ages_dict["Age >= 6 ans"].append(entry.age_years_float)
