@@ -208,5 +208,43 @@ def create_table1(asthma_entries, path_results):
         #print(f"median {label_ages}: {median_age:.2f}")
         print()
 
+    table_2_alexis(asthma_entries=asthma_entries, path_results=path_results)
+def create_table_2(path_result,asthma_entries):
+    vento=list()
+    nbserie=list()
+    tpserie=list()
+    nbbouf=list()
+    cortico=list()
+    samu=list()
+
+    vento_dict["vento"]=dict()
+    nbserie_dict["serie>2"]=dict()
+    tpserie_dict["tpserie"]=dict()
+    nbbouf_dict["bouf"]=dict()
+    cortico_dict["cortico"]=dict()
+    samu_dict["appel"]=dict()
+
+    for entry in asthma_entries:
+        vento_dict["vento"].append("ttt_vento_avant_urgences")
+        samu_dict["appel"].append("appel_du_15")
+        tpserir_dict["tpserie"].append("inf_20m_entre_series_vento","entre_20m_1h_entre_series_vento")
+        if n_repet_series_vento>2:
+            nbserie_dict["vento"].append("n_repet_series_vento")
+            #manque l'adatation au poids pour cortico et samu
+            #if (poids>20 and "n_bouffees_vento">=10):
+            #nbbouf_dict[bouf].append("n_bouffees_vento")
+            #if poids in range(18,19) and "n_bouffees_vento"=9:
+            #if poids in range(16,17) and "n_bouffees_vento"=8:
+            #if poids in range(14,15) and "n_bouffees_vento"=7:
+            #if poids in range(12,13) and "n_bouffees_vento"=6:
+            #if poids in range(10,11) and "n_bouffees_vento"=5:
+            #if poids in range(8,9) and "n_bouffees_vento"=4:
+            #if poids in range(7) and "n_bouffees_vento"=3:
+
+    simple_fct_table_2 ={"vento","nbserie","tpserie","nbbouf", "cortico","samu"}
+    for ttt_vento_avant_urgences,vento in vento_dict.item():
+        print(f'-N{ttt_vento_avant_urgences}:{len(vento)}passes')
+        print()
+
 
 
