@@ -136,7 +136,8 @@ class AutoEntry(ABC):
             return False
         return self.entry_id == other.entry_id
 
-    def set_ttt_attribute(self, attr_name, keywords, verbose=True, delay_attr=None):
+    def set_ttt_attribute(self, attr_name, keywords, verbose=True, delay_attr=None, count_it=False,
+                          with_associate_keyword=None):
         """
         Set a field corresponding to a treatment prescribed by searching it
         in the prescribed ttt
@@ -145,6 +146,9 @@ class AutoEntry(ABC):
         :param verbose:
         :param delay_attr: str attribute name in Entry, if not None, set the attr to the delay between arrival
         and the time of done date
+        :param count_it: if True, it counts how many times it is given and set the attribute to an int value
+        :param with_associate_keyword: if not None, then we need this keyword in the prescriptioin as well with all
+        the keywords
         :return:
         """
         if not hasattr(self, 'entry'):
@@ -161,6 +165,8 @@ class AutoEntry(ABC):
         if self.entry.zhcd_entry is not None:
             ttt_received_dicts.append(self.entry.zhcd_entry.ttt_received_dict)
 
+        counter = 0
+
         break_it = False
         for ttt_received_dict in ttt_received_dicts:
             if len(ttt_received_dict) > 0:
@@ -171,26 +177,34 @@ class AutoEntry(ABC):
                     prescription_date, md_name, prescription = key_ttt
                     for keyword in keywords:
                         if keyword in unidecode(prescription).lower():
-                            setattr(self, attr_name, True)
-                            if delay_attr is not None:
-                                list_dates = value_ttt["date"]
-                                if len(list_dates) > 0:
-                                    # we take the first one prescribed
-                                    done_date = list_dates[0][1]
-                                    hours, hours_float, minutes = duration_bw_dates(later_date=done_date,
-                                                                                    early_date=self.entry.arrival_date)
-                                    setattr(self, delay_attr, minutes)
-                            if verbose:
+                            if with_associate_keyword is None or \
+                                    with_associate_keyword in unidecode(prescription).lower():
+                                if count_it:
+                                    list_dates = value_ttt["date"]
+                                    counter += len(list_dates)
+                                else:
+                                    setattr(self, attr_name, True)
+                                    if delay_attr is not None:
+                                        list_dates = value_ttt["date"]
+                                        if len(list_dates) > 0:
+                                            # we take the first one prescribed
+                                            done_date = list_dates[0][1]
+                                            hours, hours_float, minutes = duration_bw_dates(later_date=done_date,
+                                                                                            early_date=self.entry.arrival_date)
+                                            setattr(self, delay_attr, minutes)
+                            if verbose and hasattr(self, "ipp"):
                                 print(f"- {self.ipp} with {attr_name}: {prescription}")
                             break_it = True
                             break
-                    if break_it:
+                    if break_it and not count_it:
                         break
-                if break_it:
+                if break_it and not count_it:
                     break
-
-        if getattr(self, attr_name) is None:
-            setattr(self, attr_name, False)
+        if count_it:
+            setattr(self, attr_name, count_it)
+        else:
+            if getattr(self, attr_name) is None:
+                setattr(self, attr_name, False)
 
     def set_field_from_pandas(self, pd_series, pandas_field_name, field_name=None, if_not_nan=True,
                               verbose=False, eq_none=None):
@@ -614,7 +628,8 @@ class AsthmaEntry(AutoEntry):
         self.set_bool_attr('plus_4h_entre_series_vento')
 
         self.n_repet_series_vento = pd_series[fields_map["n_repet_series_vento"]]
-        self.set_bool_attr('n_repet_series_vento')
+        self.set_str_attr('n_repet_series_vento')
+        # TODO n_repet_series_vento_0 n_repet_series_vento_1, n_repet_series_vento_2, n_repet_series_vento_sup_3
 
         self.n_respi_chbre_inhalation = pd_series[fields_map["n_respi_chbre_inhalation"]]
         self.set_str_attr('n_respi_chbre_inhalation')
@@ -684,7 +699,42 @@ class AsthmaEntry(AutoEntry):
         self.n_passages_urgences_asthme = pd_series[fields_map["n_passages_urgences_asthme"]]
         self.set_int_attr('n_passages_urgences_asthme')
 
-        # TODO: ajout sao2_iao, n_nebu_salbu	n_nebu_atrovent	cortico_urgences
+        # TODO: ajout n_nebu_salbu	n_nebu_atrovent
+
+        self.poids = pd_series[fields_map["poids"]]
+        self.set_float_attr('poids')
+        if self.entry is not None and self.entry.arrival_weight is not None:
+            self.poids = self.entry.arrival_weight
+
+        self.sao2_iao = pd_series[fields_map["sao2_iao"]]
+        self.set_int_attr('sao2_iao')
+        if self.sao2_iao is None and self.entry is not None:
+            sao2 = self.entry.get_iao_constante(cste_name="sao2")
+            if sao2 is not None:
+                self.sao2_iao = sao2
+
+        self.duree_sejour_urgences = pd_series[fields_map["duree_sejour_urgences"]]
+        self.set_int_attr('duree_sejour_urgences')
+        if self.duree_sejour_urgences is None and self.entry is not None:
+            self.duree_sejour_urgences = entry.get_duration_of_stay()
+
+        verbose_ttt = False
+
+        self.cortico_urgences = pd_series[fields_map["cortico_urgences"]]
+        self.set_bool_attr('cortico_urgences')
+        self.set_ttt_attribute(attr_name="cortico_urgences", keywords=["solupred", "solumedrol", "celestene"],
+                               verbose=verbose_ttt)
+
+        self.n_nebu_salbu = pd_series[fields_map["n_nebu_salbu"]]
+        self.set_int_attr('n_nebu_salbu')
+        self.set_ttt_attribute(attr_name="n_nebu_salbu", keywords=["salbutamol", "vento"],
+                               with_associate_keyword="nebu",
+                               verbose=verbose_ttt, count_it=True)
+
+        self.n_nebu_atrovent = pd_series[fields_map["n_nebu_atrovent"]]
+        self.set_int_attr('n_nebu_atrovent')
+        self.set_ttt_attribute(attr_name="n_nebu_atrovent", keywords=["atrovent"],
+                               verbose=verbose_ttt, count_it=True)
 
         self.atcd_dechoc = pd_series[fields_map["atcd_dechoc"]]
         self.set_bool_attr('atcd_dechoc')
