@@ -2,6 +2,7 @@ import os
 from sys import platform
 from datetime import datetime
 import numpy as np
+from scipy import stats
 import pandas as pd
 import random
 from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
@@ -116,6 +117,8 @@ def run_exemples(path_results, asthma_entries):
                        color_discrete_map=None,
                        save_formats=save_formats)
 
+
+def md_ranking(asthma_entries):
     md_dict = dict()
     for entry in asthma_entries:
         if entry.md_in_charge not in md_dict:
@@ -128,7 +131,8 @@ def run_exemples(path_results, asthma_entries):
     n_entries_by_md, mds = sort_two_list(main_list=n_entries_by_md, second_list=mds, order="descending")
     top_to_display = min(5, len(md_dict))
     for index_to_display in range(top_to_display):
-        print(f"Top {index_to_display+1}: {mds[index_to_display]} avec {n_entries_by_md[index_to_display]} questionnaires")
+        print(
+            f"Top {index_to_display + 1}: {mds[index_to_display]} avec {n_entries_by_md[index_to_display]} questionnaires")
 
 
 def main():
@@ -158,7 +162,7 @@ def main():
 
     asthma_entries = from_csv_to_asthma_entries(csv_file=database_csv_file)
 
-    if True:
+    if False:
         run_sandbox = False
 
         if run_sandbox:
@@ -166,49 +170,180 @@ def main():
         else:
             run_exemples(path_results=path_results, asthma_entries=asthma_entries)
 
-    table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
-    # create_table1(asthma_entries=asthma_entries, path_results=path_results)
+    md_ranking(asthma_entries)
+
+    entries_groups = dict()
+    entries_groups["Tous"] = asthma_entries
+    entries_groups["< 6 ans"] = list(filter(lambda e: e.age_years < 6, asthma_entries))
+    entries_groups[">= 6 ans"] = list(filter(lambda e: e.age_years >= 6, asthma_entries))
+    entries_groups["6 - 11 ans"] = list(filter(lambda e: 6 <= e.age_years < 12, asthma_entries))
+    entries_groups["12 - 18 ans"] = list(filter(lambda e: 12 <= e.age_years < 18, asthma_entries))
+    entries_groups["RAD"] = list(filter(lambda e: (not e.is_hospit_tradi) and (not e.is_hospit_rea), asthma_entries))
+    entries_groups["Hospit tradi"] = list(filter(lambda e: e.is_hospit_tradi, asthma_entries))
+    entries_groups["Hospit rea"] = list(filter(lambda e: e.is_hospit_rea, asthma_entries))
+
+    # table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
+    groups_to_compute_p = ["< 6 ans", ">= 6 ans"]
+    create_table_1(entries_groups=entries_groups, path_results=path_results, all_group_key="Tous",
+                   with_p_stat=False,
+                   groups_to_compute_p=groups_to_compute_p)
 
 
-def create_table1(asthma_entries, path_results):
-    ages_inf_6=list()
-    ages_sup_6=list()
+def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_stat=True,
+                   groups_to_compute_p=None):
+    output_dict = dict()
+    output_dict[""] = []
 
-    ages_dict = dict()
-    ages_dict["Age < 6 ans"] = list()
-    ages_dict["Age >= 6 ans"] = list()
-    ages_dict["Ages"] = list()
+    # TODO: χ2 used for categorical variables and t test used for continuous variables.
 
-    for entry in asthma_entries:
-        ages_dict["Ages"].append(entry.age_years_float)
-        if entry.age_years_float < 6:
-            ages_dict["Age < 6 ans"].append(entry.age_years_float)
-        else:
-            ages_dict["Age >= 6 ans"].append(entry.age_years_float)
+    for key_group in entries_groups.keys():
+        output_dict[key_group] = []
+
+    # key is the line in output_dict to fill afterwards
+    # value is the table with n lines and 2 columns
+    chi_square_data_dict = dict()
+
+    index_group = 0
+    index_group_for_stat = 0
+
+    for key_group, group_entries in entries_groups.items():
+        # N
+        if index_group == 0:
+            output_dict[""].append("N")
+        n_entries = len(group_entries)
+        extra_str = ""
+        if all_group_key is not None and key_group != all_group_key:
+            perc_n = (n_entries / len(entries_groups[all_group_key])) * 100
+            extra_str = f" ({perc_n:.1f}%)"
+        output_dict[key_group].append(f"{n_entries}{extra_str}")
+
+        # unique
+        if index_group == 0:
+            output_dict[""].append("Unique")
+        n_uniques_entries = len(set([e.ipp for e in group_entries]))
+        # perc_n = (n_uniques_entries / n_entries) * 100
+        # extra_str = f" ({perc_n:.1f}%)"
+        extra_str = ""
+        output_dict[key_group].append(f"{n_uniques_entries}{extra_str}")
+
+        # age
+        if index_group == 0:
+            output_dict[""].append("Age (années)")
+        ages = [e.age_years_float for e in group_entries]
+        median_age = np.median(ages)
+        p_25 = np.percentile(ages, 25)
+        p_75 = np.percentile(ages, 75)
+        output_dict[key_group].append(f"{median_age:.1f} ({p_25:.1f} - {p_75:.1f})")
+
+        # Gender
+        if index_group == 0:
+            output_dict[""].append("Fille %")
+        genders = [e.gender for e in group_entries]
+        n_female = genders.count("F")
+        perc_female = (n_female / len(group_entries)) * 100
+        output_dict[key_group].append(f"{n_female} ({perc_female:.1f} %)")
+        if with_p_stat and key_group in groups_to_compute_p:
+            line_index = len(output_dict[key_group]) - 1
+            if line_index not in chi_square_data_dict:
+                # cols represent the 2 groups
+                chi_square_data_dict[line_index] = [[0, 0],
+                                                    [0, 0]]
+            chi_square_data_dict[line_index][0][index_group_for_stat] = n_female
+            chi_square_data_dict[line_index][1][index_group_for_stat] = len(group_entries) - n_female
+
+        # booleans
+        # TODO: add atcd_rea ?
+        bool_attr_to_name_dict = {"atcd_dechoc": "Atcd déchoc",
+                                  "pec_dechoc": "Prise en charge au dechoc",
+                                  "cortico_urgences": "Corticoides aux urgences",
+                                  "is_hospit_tradi": "Hospit tradi",
+                                  "is_hospit_rea": "Hospit réa"
+                                  }
+
+        for attr_name, label_data in bool_attr_to_name_dict.items():
+            if index_group == 0:
+                output_dict[""].append(label_data)
+
+            n_values = len(list(filter(lambda e: getattr(e, attr_name),
+                                       group_entries)))
+            n_none_values = len(list(filter(lambda e: getattr(e, attr_name) is None,
+                                            group_entries)))
+            n_total = len(group_entries) - n_none_values
+            if n_total == 0:
+                output_dict[key_group].append("0 / 0")
+            else:
+                perc_value = (n_values / n_total) * 100
+
+                if n_total != len(group_entries):
+                    output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+                else:
+                    output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        # continuous values
+        wait_time_attr_to_name_dict = {"n_passages_urgences": "N passages urgences depuis 2023",
+                                       "n_passages_urgences_asthme": "N passages urgences depuis 2023 pour asthme",
+                                       "sao2_iao": "SaO2",
+                                       "n_nebu_salbu": "N nebu salbutamol",
+                                       "duree_sejour_urgences": "Durée séjour urgences"
+                                       }
+        for attr_name, label_data in wait_time_attr_to_name_dict.items():
+            if index_group == 0:
+                output_dict[""].append(label_data)
+            values = [getattr(e, attr_name) for e in group_entries]
+            values = list(filter(lambda v: v is not None, values))
+            if len(values) == 0:
+                output_dict[key_group].append("")
+                continue
+            median_value = np.median(values)
+            p_25 = np.percentile(values, 25)
+            p_75 = np.percentile(values, 75)
+            output_dict[key_group].append(f"{median_value:.1f} ({p_25:.1f} - {p_75:.1f})")
+
+        # n_salbu <= 1
+        if index_group == 0:
+            output_dict[""].append("Aerosol salbu <= 1")
+        values = [getattr(e, "n_nebu_salbu") for e in group_entries]
+        # values = list(filter(lambda v: v is not None, values))
+        n_total = len(values)
+        n_values = len(list(filter(lambda v: v is not None and v <= 1, values)))
+        perc_value = (n_values / n_total) * 100
+        output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        # n_salbu > 6
+        if index_group == 0:
+            output_dict[""].append("Aerosol salbu > 6")
+        values = [getattr(e, "n_nebu_salbu") for e in group_entries]
+        # values = list(filter(lambda v: v is not None, values))
+        n_total = len(values)
+        n_values = len(list(filter(lambda v: v is not None and v > 6, values)))
+        perc_value = (n_values / n_total) * 100
+        output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        # with atrovent
+        if index_group == 0:
+            output_dict[""].append("Avec atrovent (>= 1)")
+        values = [getattr(e, "n_nebu_atrovent") for e in group_entries]
+        # values = list(filter(lambda v: v is not None, values))
+        n_total = len(values)
+        n_values = len(list(filter(lambda v: v is not None and v >= 1, values)))
+        perc_value = (n_values / n_total) * 100
+        output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        index_group += 1
+        if key_group in groups_to_compute_p:
+            index_group_for_stat += 1
+
+    if with_p_stat:
+        output_dict["p"] = [""] * len(output_dict[""])
+        for line_index, chi_square_data in chi_square_data_dict.items():
+            res = stats.chi2_contingency(chi_square_data)
+            output_dict["p"][line_index] = f"{res.pvalue:.4f}"
+
+    df = pd.DataFrame(output_dict)
+    export_file_name = os.path.join(path_results, "these_alexis_table_1.csv")
+    df.to_csv(export_file_name, encoding="utf-8", index=False)
 
 
-    #all_ages = ages_inf_6+ages_sup_6
-    #all_ages = [entry.age_years_float for entry in asthma_entries]
-
-    simple_fct_dict = {"moyenne": np.mean, "std": np.std, "median": np.median, "min": np.min, "max": np.max}
-
-    for label_ages, ages in ages_dict.items():
-        print(f"- N {label_ages}: {len(ages)} passes")
-        for fonction_name, fct in simple_fct_dict.items():
-            result_fct = fct(ages)
-            print(f"{fonction_name} {label_ages}: {result_fct:.2f}")
-
-        perc_25 = np.percentile(ages, 25)
-        perc_75 = np.percentile(ages, 75)
-        print(f"Percentile 25: {perc_25:.2f}, 75: {perc_75:.2f}")
-        #mean_ages = np.mean(ages)
-        #print(f"moyenne {label_ages}: {mean_ages:.2f}")
-
-        #median_age=np.median(ages)
-        #print(f"median {label_ages}: {median_age:.2f}")
-        print()
-
-    table_2_alexis(asthma_entries=asthma_entries, path_results=path_results)
 def create_table_2(path_result,asthma_entries):
     vento=list()
     nbserie=list()

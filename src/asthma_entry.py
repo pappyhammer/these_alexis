@@ -177,6 +177,8 @@ class AutoEntry(ABC):
                     prescription_date, md_name, prescription = key_ttt
                     for keyword in keywords:
                         if keyword in unidecode(prescription).lower():
+                            # if keyword in ["salbu", "vento"]:
+                            #     print(f"FOUND salbu/vento: {prescription}: {value_ttt['date']}")
                             if with_associate_keyword is None or \
                                     with_associate_keyword in unidecode(prescription).lower():
                                 if count_it:
@@ -201,7 +203,7 @@ class AutoEntry(ABC):
                 if break_it and not count_it:
                     break
         if count_it:
-            setattr(self, attr_name, count_it)
+            setattr(self, attr_name, counter)
         else:
             if getattr(self, attr_name) is None:
                 setattr(self, attr_name, False)
@@ -699,8 +701,6 @@ class AsthmaEntry(AutoEntry):
         self.n_passages_urgences_asthme = pd_series[fields_map["n_passages_urgences_asthme"]]
         self.set_int_attr('n_passages_urgences_asthme')
 
-        # TODO: ajout n_nebu_salbu	n_nebu_atrovent
-
         self.poids = pd_series[fields_map["poids"]]
         self.set_float_attr('poids')
         if self.entry is not None and self.entry.arrival_weight is not None:
@@ -727,14 +727,27 @@ class AsthmaEntry(AutoEntry):
 
         self.n_nebu_salbu = pd_series[fields_map["n_nebu_salbu"]]
         self.set_int_attr('n_nebu_salbu')
-        self.set_ttt_attribute(attr_name="n_nebu_salbu", keywords=["salbutamol", "vento"],
-                               with_associate_keyword="nebu",
+        self.set_ttt_attribute(attr_name="n_nebu_salbu", keywords=["ventoline 5mg/2,5ml", "ventoline <16kg et >10kg",
+                                                                   "ventoline >16 kg",
+                                                                   "ventoline <10kg",
+                                                                   "salbutamol (sulfate) 5 mg/2,5 ml",
+                                                                   "salbutamol (sulfate) 2,5 mg/2,5 ml"],
                                verbose=verbose_ttt, count_it=True)
+                               # with_associate_keyword="nebu",
 
         self.n_nebu_atrovent = pd_series[fields_map["n_nebu_atrovent"]]
         self.set_int_attr('n_nebu_atrovent')
         self.set_ttt_attribute(attr_name="n_nebu_atrovent", keywords=["atrovent"],
                                verbose=verbose_ttt, count_it=True)
+
+        self.pec_dechoc = pd_series[fields_map["pec_dechoc"]]
+        self.set_bool_attr('pec_dechoc')
+
+        if self.entry is not None and self.pec_dechoc is None:
+            if self.entry.is_in_dechoc_box:
+                self.pec_dechoc = True
+            else:
+                self.pec_dechoc = False
 
         self.atcd_dechoc = pd_series[fields_map["atcd_dechoc"]]
         self.set_bool_attr('atcd_dechoc')
