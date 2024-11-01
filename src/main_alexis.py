@@ -173,7 +173,6 @@ def main():
     md_ranking(asthma_entries)
 
     entries_groups = dict()
-    entries_groups["Tous"] = asthma_entries
     entries_groups["< 6 ans"] = list(filter(lambda e: e.age_years < 6, asthma_entries))
     entries_groups[">= 6 ans"] = list(filter(lambda e: e.age_years >= 6, asthma_entries))
     entries_groups["6 - 11 ans"] = list(filter(lambda e: 6 <= e.age_years < 12, asthma_entries))
@@ -181,10 +180,11 @@ def main():
     entries_groups["RAD"] = list(filter(lambda e: (not e.is_hospit_tradi) and (not e.is_hospit_rea), asthma_entries))
     entries_groups["Hospit tradi"] = list(filter(lambda e: e.is_hospit_tradi, asthma_entries))
     entries_groups["Hospit rea"] = list(filter(lambda e: e.is_hospit_rea, asthma_entries))
+    entries_groups["Effectif total"] = asthma_entries
 
     # table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
     groups_to_compute_p = ["< 6 ans", ">= 6 ans"]
-    create_table_1(entries_groups=entries_groups, path_results=path_results, all_group_key="Tous",
+    create_table_1(entries_groups=entries_groups, path_results=path_results, all_group_key="Effectif total",
                    with_p_stat=False,
                    groups_to_compute_p=groups_to_compute_p)
 
@@ -284,7 +284,7 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
                                        "n_passages_urgences_asthme": "N passages urgences depuis 2023 pour asthme",
                                        "sao2_iao": "SaO2",
                                        "n_nebu_salbu": "N nebu salbutamol",
-                                       "duree_sejour_urgences": "Durée séjour urgences"
+                                       "duree_sejour_urgences": "Temps passe aux urgences (min)"
                                        }
         for attr_name, label_data in wait_time_attr_to_name_dict.items():
             if index_group == 0:
@@ -328,6 +328,82 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
         n_values = len(list(filter(lambda v: v is not None and v >= 1, values)))
         perc_value = (n_values / n_total) * 100
         output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        # booleans
+        # allergies_classiques	allergies_autres	atcd_cortico_6_mois	atcd_rea	atcd_hospit
+        bool_attr_to_name_dict = {"enfant_danger": "Senti enfant en danger ?",
+                                  "impuissant": "Sensation d'être impuissant",
+                                  "ressources_full_mode": "Utilisation toutes les ressources thérapeutiques",
+                                  "consult_med_dans_les_5_j": "Consult medecin 5 jours avant",
+                                  "suivi_medecin": "Suivi medecin",
+                                  "suivi_med_traitant": "Suivi medecin traitan",
+                                  "suivi_pneumologue": "Suivi pneumologue",
+                                  "suivi_pediatre": "Suivi pediatre",
+                                  "suivi_allergo": "Suivi allergo",
+                                  "suivi_autre": "Suivi autre",
+                                  "last_consult_suivi_inf_6m": "Dernier suivi < 6 mois",
+                                  "last_consult_suivi_6m_1a": "Dernier suivi entre 6 mois et 1 an",
+                                  "last_consult_suivi_sup_1a": "Dernier suivi > 1 an",
+                                  "efr_done": "A déjà eu une EFR ?",
+                                  "pai_done": "PAI en place",
+                                  "controle_symptomes": "A eu symptomes asthme > 1 j/semaine",
+                                  "controle_limitation_activite": "Limitation activite",
+                                  "controle_vento_plus_ou_1x_sem": "Vento plus d'une ou 2 fois par semaine",
+                                  "controle_nuit": "Reveil la nuit a cause asthme",
+                                  "allergies_classiques": "Allergies classiques",
+                                  "atcd_cortico_6_mois": "A recu des corticoides dans les 6 mois precedent",
+                                  "atcd_rea": "Antecedent rea",
+                                  "atcd_hospit": "Antecedent hospit tradi"
+                                  # "": "",
+                                  }
+
+        for attr_name, label_data in bool_attr_to_name_dict.items():
+            if index_group == 0:
+                output_dict[""].append(label_data)
+
+            n_values = len(list(filter(lambda e: getattr(e, attr_name),
+                                       group_entries)))
+            n_none_values = len(list(filter(lambda e: getattr(e, attr_name) is None,
+                                            group_entries)))
+            n_total = len(group_entries) - n_none_values
+            if n_total == 0:
+                output_dict[key_group].append("0 / 0")
+            else:
+                perc_value = (n_values / n_total) * 100
+
+                if n_total != len(group_entries):
+                    output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+                else:
+                    output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+
+        # continuous values
+        wait_time_attr_to_name_dict = {"age_premiere_ventoline": "Age premiere ventoline (mois)"
+                                       }
+        for attr_name, label_data in wait_time_attr_to_name_dict.items():
+            if index_group == 0:
+                output_dict[""].append(label_data)
+            values = [getattr(e, attr_name) for e in group_entries]
+            values = list(filter(lambda v: v is not None, values))
+            if len(values) == 0:
+                output_dict[key_group].append("")
+                continue
+            median_value = np.median(values)
+            p_25 = np.percentile(values, 25)
+            p_75 = np.percentile(values, 75)
+            output_dict[key_group].append(f"{median_value:.1f} ({p_25:.1f} - {p_75:.1f})")
+
+        # Dernière EFR depuis 2023
+        if index_group == 0:
+            output_dict[""].append("Dernière EFR depuis 2023")
+        values = [getattr(e, "annee_derniere_efr") for e in group_entries]
+        values = list(filter(lambda v: v is not None, values))
+        n_total = len(values)
+        n_values = len(list(filter(lambda v: v >= 2023, values)))
+        if n_total > 0:
+            perc_value = (n_values / n_total) * 100
+            output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+        else:
+            output_dict[key_group].append("0 / 0")
 
         index_group += 1
         if key_group in groups_to_compute_p:
