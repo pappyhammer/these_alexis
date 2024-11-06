@@ -405,25 +405,36 @@ class AsthmaEntry(AutoEntry):
 
         self.age_years = pd_series[fields_map["age_years"]]
         self.set_int_attr('age_years')
-        if self.age_years is None:
+        if entry is not None and self.age_years is None:
             self.age_years = entry.age_years
 
         self.age_in_years_round = pd_series[fields_map["age_in_years_round"]]
-        self.set_int_attr('age_in_years_round')
+        self.set_str_attr('age_in_years_round')
+        self.less_than_6_y = None
+        if "<" in self.age_in_years_round:
+            self.less_than_6_y = True
+        elif ">" in self.age_in_years_round:
+            self.less_than_6_y = False
+        else:
+            age = int(self.age_in_years_round)
+            if age < 6:
+                self.less_than_6_y = True
+            else:
+                self.less_than_6_y = False
 
         self.age_months = pd_series[fields_map["age_months"]]
         self.set_int_attr('age_months')
-        if self.age_months is None:
+        if entry is not None and self.age_months is None:
             self.age_months = entry.age_months
 
         self.age_days = pd_series[fields_map["age_days"]]
         self.set_int_attr('age_days')
-        if self.age_days is None:
+        if entry is not None and self.age_days is None:
             self.age_days = entry.age_days
 
         self.age_years_float = pd_series[fields_map["age_years_float"]]
         self.set_float_attr('age_years_float')
-        if self.age_years_float is None:
+        if entry is not None and self.age_years_float is None:
             self.age_years_float = entry.age_years_float
 
         # Avez-vous senti votre enfant en danger ?
@@ -446,8 +457,6 @@ class AsthmaEntry(AutoEntry):
         self.set_str_attr('comments_fact_venue')
 
         # SUIVI
-
-
 
         # L’asthme de votre enfant est il suivi par un médecin
         self.suivi_medecin = pd_series[fields_map["suivi_medecin"]]
@@ -483,9 +492,13 @@ class AsthmaEntry(AutoEntry):
 
         self.efr_done = pd_series[fields_map["efr_done"]]
         self.set_bool_attr('efr_done')
+        if self.less_than_6_y:
+            self.efr_done = None
 
         self.annee_derniere_efr = pd_series[fields_map["annee_derniere_efr"]]
         self.set_int_attr('annee_derniere_efr')
+        if self.less_than_6_y:
+            self.annee_derniere_efr = None
 
         self.pai_done = pd_series[fields_map["pai_done"]]
         self.set_bool_attr('pai_done')
@@ -545,29 +558,57 @@ class AsthmaEntry(AutoEntry):
 
         # CONNAISSANCE
 
-        self.ttt_de_fond_flixotide = pd_series[fields_map["ttt_de_fond_flixotide"]]
-        self.set_bool_attr('ttt_de_fond_flixotide')
-
-        self.ttt_de_fond_seretide = pd_series[fields_map["ttt_de_fond_seretide"]]
-        self.set_bool_attr('ttt_de_fond_seretide')
-
-        self.ttt_de_fond_singulair = pd_series[fields_map["ttt_de_fond_singulair"]]
-        self.set_bool_attr('ttt_de_fond_singulair')
-
         self.ttt_de_fond_ne_sais_pas = pd_series[fields_map["ttt_de_fond_ne_sais_pas"]]
         self.set_bool_attr('ttt_de_fond_ne_sais_pas')
 
+        self.ttt_de_fond_flixotide = pd_series[fields_map["ttt_de_fond_flixotide"]]
+        self.set_bool_attr('ttt_de_fond_flixotide')
+        if self.ttt_de_fond_ne_sais_pas:
+            self.ttt_de_fond_flixotide = None
+
+        self.ttt_de_fond_seretide = pd_series[fields_map["ttt_de_fond_seretide"]]
+        self.set_bool_attr('ttt_de_fond_seretide')
+        if self.ttt_de_fond_ne_sais_pas:
+            self.ttt_de_fond_seretide = None
+
+        self.ttt_de_fond_singulair = pd_series[fields_map["ttt_de_fond_singulair"]]
+        self.set_bool_attr('ttt_de_fond_singulair')
+        if self.ttt_de_fond_ne_sais_pas:
+            self.ttt_de_fond_singulair = None
+
         self.ttt_de_fond_autre = pd_series[fields_map["ttt_de_fond_autre"]]
         self.set_str_attr('ttt_de_fond_autre')
+        if self.ttt_de_fond_ne_sais_pas:
+            self.ttt_de_fond_autre = None
 
         self.ttt_de_fond_aucun = pd_series[fields_map["ttt_de_fond_aucun"]]
         self.set_bool_attr('ttt_de_fond_aucun')
+        if self.ttt_de_fond_ne_sais_pas:
+            self.ttt_de_fond_aucun = None
 
         self.ecole_asthme_connue = pd_series[fields_map["ecole_asthme_connue"]]
         self.set_bool_attr('ecole_asthme_connue')
 
         self.contact_ecole_asthme = pd_series[fields_map["contact_ecole_asthme"]]
         self.set_bool_attr('contact_ecole_asthme')
+
+        self.ecole_asthme_connue_et_contact = None
+        self.ecole_asthme_connue_sans_contact = None
+        self.ecole_asthme_non_connue = None
+        if self.ecole_asthme_connue is not None:
+            if not self.ecole_asthme_connue:
+                self.ecole_asthme_non_connue = True
+                self.ecole_asthme_connue_et_contact = False
+                self.ecole_asthme_connue_sans_contact = False
+            else:
+                self.ecole_asthme_non_connue = False
+                if self.contact_ecole_asthme is not None:
+                    if self.contact_ecole_asthme:
+                        self.ecole_asthme_connue_et_contact = True
+                        self.ecole_asthme_connue_sans_contact = False
+                    else:
+                        self.ecole_asthme_connue_et_contact = False
+                        self.ecole_asthme_connue_sans_contact = True
 
         self.chambre_inhalation = pd_series[fields_map["chambre_inhalation"]]
         self.set_bool_attr('chambre_inhalation')
@@ -577,9 +618,13 @@ class AsthmaEntry(AutoEntry):
 
         self.peack_flow = pd_series[fields_map["peack_flow"]]
         self.set_bool_attr('peack_flow')
+        if self.less_than_6_y:
+            self.annee_derniere_efr = None
 
         self.peack_flow_bien_utilise = pd_series[fields_map["peack_flow_bien_utilise"]]
         self.set_bool_attr('peack_flow_bien_utilise')
+        if self.less_than_6_y:
+            self.peack_flow_bien_utilise = None
 
         self.comments_connaissance = pd_series[fields_map["comments_connaissance"]]
         self.set_str_attr('comments_connaissance')
@@ -591,9 +636,21 @@ class AsthmaEntry(AutoEntry):
 
         self.plan_action_suivi = pd_series[fields_map["plan_action_suivi"]]
         self.set_bool_attr('plan_action_suivi')
+        if self.plan_action_maison is None or not self.plan_action_maison:
+            self.plan_action_suivi = None
 
         self.plan_action_des_urgences = pd_series[fields_map["plan_action_des_urgences"]]
         self.set_bool_attr('plan_action_des_urgences')
+        if self.plan_action_maison is None or not self.plan_action_maison:
+            self.plan_action_des_urgences = None
+
+        self.plan_action_des_urgences_si_present = None
+        if self.plan_action_maison is not None:
+            if self.plan_action_maison:
+                if self.plan_action_des_urgences:
+                    self.plan_action_des_urgences_si_present = True
+                else:
+                    self.plan_action_des_urgences_si_present = False
 
         self.prescription_vento = pd_series[fields_map["prescription_vento"]]
         self.set_bool_attr('prescription_vento')
@@ -629,17 +686,72 @@ class AsthmaEntry(AutoEntry):
         self.plus_4h_entre_series_vento = pd_series[fields_map["plus_4h_entre_series_vento"]]
         self.set_bool_attr('plus_4h_entre_series_vento')
 
+        if (not self.inf_20m_entre_series_vento) and (not self.entre_20m_1h_entre_series_vento) and \
+                (not self.entre_1h_4h_entre_series_vento) and (not self.plus_4h_entre_series_vento):
+            self.inf_20m_entre_series_vento = None
+            self.entre_20m_1h_entre_series_vento = None
+            self.entre_1h_4h_entre_series_vento = None
+            self.plus_4h_entre_series_vento = None
+
         self.n_repet_series_vento = pd_series[fields_map["n_repet_series_vento"]]
         self.set_str_attr('n_repet_series_vento')
-        # TODO n_repet_series_vento_0 n_repet_series_vento_1, n_repet_series_vento_2, n_repet_series_vento_sup_3
+
+        self.n_repet_series_vento_0 = None
+        self.n_repet_series_vento_1 = None
+        self.n_repet_series_vento_2 = None
+        self.n_repet_series_vento_sup_3 = None
+        if self.n_repet_series_vento is not None:
+            try:
+                n_repet = int(self.n_repet_series_vento)
+                if n_repet == 0:
+                    self.n_repet_series_vento_0 = True
+                    self.n_repet_series_vento_1 = False
+                    self.n_repet_series_vento_2 = False
+                    self.n_repet_series_vento_sup_3 = False
+                elif n_repet == 1:
+                    self.n_repet_series_vento_0 = False
+                    self.n_repet_series_vento_1 = True
+                    self.n_repet_series_vento_2 = False
+                    self.n_repet_series_vento_sup_3 = False
+                elif n_repet == 2:
+                    self.n_repet_series_vento_0 = False
+                    self.n_repet_series_vento_1 = False
+                    self.n_repet_series_vento_2 = True
+                    self.n_repet_series_vento_sup_3 = False
+                else:
+                    self.n_repet_series_vento_0 = False
+                    self.n_repet_series_vento_1 = False
+                    self.n_repet_series_vento_2 = False
+                    self.n_repet_series_vento_sup_3 = True
+            except ValueError:
+                if ">" in self.n_repet_series_vento:
+                    self.n_repet_series_vento_0 = False
+                    self.n_repet_series_vento_1 = False
+                    self.n_repet_series_vento_2 = False
+                    self.n_repet_series_vento_sup_3 = True
 
         self.n_respi_chbre_inhalation = pd_series[fields_map["n_respi_chbre_inhalation"]]
         self.set_str_attr('n_respi_chbre_inhalation')
 
-        self.delai_urg_inf_2h = pd_series[fields_map["delai_urg_inf_2h"]]
-        self.set_str_attr('delai_urg_inf_2h')
+        self.n_respi_chbre_inhalation_sup_10 = None
+        if self.n_respi_chbre_inhalation is not None:
+            try:
+                n_respi = int(self.n_respi_chbre_inhalation)
+                if n_respi >= 10:
+                    self.n_respi_chbre_inhalation_sup_10 = True
+                else:
+                    self.n_respi_chbre_inhalation_sup_10 = False
+            except ValueError:
+                if "s" in self.n_repet_series_vento:
+                    n_respi = int(self.n_respi_chbre_inhalation[:-1])
+                    if n_respi >= 10:
+                        self.n_respi_chbre_inhalation_sup_10 = True
+                    else:
+                        self.n_respi_chbre_inhalation_sup_10 = False
 
-        #
+        self.delai_urg_inf_2h = pd_series[fields_map["delai_urg_inf_2h"]]
+        self.set_bool_attr('delai_urg_inf_2h')
+
         self.delai_urg_2h_6h = pd_series[fields_map["delai_urg_2h_6h"]]
         self.set_bool_attr('delai_urg_2h_6h')
 
@@ -704,7 +816,40 @@ class AsthmaEntry(AutoEntry):
         self.poids = pd_series[fields_map["poids"]]
         self.set_float_attr('poids')
         if self.entry is not None and self.entry.arrival_weight is not None:
-            self.poids = self.entry.arrival_weight
+            self.poids = float(self.entry.arrival_weight)
+
+        # if True means the right number of ventoline has been done at home.
+        self.correct_n_bouffee_vento = None
+        if self.poids is None:
+            # no need for it if weight is not None
+            self.n_bouffees_vento = None
+        elif self.n_bouffees_vento is not None:
+            if self.poids < 4:
+                n_boufees_goal = 1
+            elif self.poids < 6:
+                n_boufees_goal = 2
+            elif self.poids < 8:
+                n_boufees_goal = 3
+            elif self.poids < 10:
+                n_boufees_goal = 4
+            elif self.poids < 12:
+                n_boufees_goal = 5
+            elif self.poids < 14:
+                n_boufees_goal = 6
+            elif self.poids < 16:
+                n_boufees_goal = 7
+            elif self.poids < 18:
+                n_boufees_goal = 8
+            elif self.poids < 20:
+                n_boufees_goal = 9
+            else:
+                n_boufees_goal = 10
+
+            if n_boufees_goal - self.n_bouffees_vento <= 1:
+                self.correct_n_bouffee_vento = True
+            else:
+                # print(f"Bouffées reçues: {self.n_bouffees_vento}, goal {n_boufees_goal} pour poids {self.poids}")
+                self.correct_n_bouffee_vento = False
 
         self.sao2_iao = pd_series[fields_map["sao2_iao"]]
         self.set_int_attr('sao2_iao')
@@ -752,11 +897,12 @@ class AsthmaEntry(AutoEntry):
         self.atcd_dechoc = pd_series[fields_map["atcd_dechoc"]]
         self.set_bool_attr('atcd_dechoc')
 
-        if self.entries_by_ipp is not None and self.n_passages_urgences is None and self.ipp in self.entries_by_ipp:
+        if self.entries_by_ipp is not None and self.n_passages_urgences is None and self.ipp in self.entries_by_ipp \
+                and self.entry is not None:
             n_passages_urgences = 0
             n_passages_urgences_asthme = 0
             atcd_dechoc = False
-            for other_entry in self.entries_by_ipp[self.entry.ipp]:
+            for other_entry in self.entries_by_ipp[self.ipp]:
                 if other_entry == self.entry:
                     continue
                 if other_entry.arrival_date < self.entry.arrival_date:
@@ -779,6 +925,79 @@ class AsthmaEntry(AutoEntry):
                 # the first two should be the first person connected (first name and last name or the other way around)
                 if len(team_members) > 1:
                     self.md_in_charge = " ".join(team_members[:2])
+
+
+        """
+                    Plusieurs critères ont été nécessaires à prendre en compte pour définir la qualité de la prise 
+                    en charge thérapeutique de la crise d’asthme. Ainsi nous avons inventé un score allant de 0 à 10 afin d’approcher au mieux son évaluation.
+                    Si absence de prise de BDCA: 0/10 
+                    Si prise de BDCA: +3 points
+                    Si bon nombre de bouffée par rapport au poids: +1 point
+                    Si prise de CSO: +2 points
+                    Si prise 3 séries de BDCA: +2 points,  2 prise de BDCA: +1, 1 prise de BDCA: +0.
+                    Si intervalle de prise <1h: +1 point.
+                    Si appel samu: +1 point.
+                    On estime donc qu’un score:
+                    -mauvais: 0 à 3/10
+                    -Modéré: 3 à 5/10.
+                    -Bon: 5 à 7/10
+                    -Parfait: 7 à 10/10.
+                """
+        self.score_quality = None
+        self.measure_quality_score()
+
+    def measure_quality_score(self):
+        self.score_quality = 0
+
+        if self.appel_du_15 is None:
+            self.score_quality = None
+            return
+        if self.appel_du_15:
+            self.score_quality += 1
+
+        if self.ttt_vento_avant_urgences is None:
+            self.score_quality = None
+            return
+        if not self.ttt_vento_avant_urgences:
+            return
+
+        self.score_quality += 3
+
+        # if not self.ttt_vento_avant_urgences:
+
+        if self.correct_n_bouffee_vento is None:
+            self.score_quality = None
+            return
+        if self.correct_n_bouffee_vento:
+            self.score_quality += 1
+
+        if self.ttt_cortico_avant_urgences is None:
+            self.score_quality = None
+            return
+        if self.ttt_cortico_avant_urgences:
+            self.score_quality += 2
+
+        if self.n_repet_series_vento_2 is None:
+            self.score_quality = None
+            return
+        if self.n_repet_series_vento_2:
+            self.score_quality += 1
+
+        if self.n_repet_series_vento_sup_3 is None:
+            self.score_quality = None
+            return
+        if self.n_repet_series_vento_sup_3:
+            self.score_quality += 2
+
+        if self.inf_20m_entre_series_vento is None:
+            self.score_quality = None
+            return
+        if self.inf_20m_entre_series_vento or self.entre_20m_1h_entre_series_vento:
+            self.score_quality += 1
+
+
+
+
 
     def update_auto_fill_attributes(self, auto_dict):
         pass

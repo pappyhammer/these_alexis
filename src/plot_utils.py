@@ -674,6 +674,12 @@ def plot_box_plots(data_dict, filename,
     # removing the ticks but not the labels
     ax1.xaxis.set_ticks_position('none')
     # sce clusters labels
+    # removing the ticks but not the labels
+    ax1.xaxis.set_ticks_position('none')
+    ax1.spines['bottom'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['left'].set_visible(False)
 
     ax1.set_xticklabels(labels)
     if x_labels_rotation is not None:
@@ -1478,6 +1484,7 @@ def plot_scatter_family(data_dict, colors_dict,
                         with_y_jitter=None,
                         x_labels_rotation=None,
                         h_lines_y_values=None,
+                        plot_extra_lines_dict=None,
                         with_text=False,
                         default_marker='o',
                         text_size=5,
@@ -1500,6 +1507,8 @@ def plot_scatter_family(data_dict, colors_dict,
     :param filename:
     :param lines_plot_values: (dict) same keys as data_dict, value is a list of list of 2 list of int or float,
     representing x & y value of plot to trace
+    :param plot_extra_lines_dict: (dict) dict containing dict with 5 keys being string:
+    x (list), y (list), linewidth, linestyles, color, zorder (set to 40 to be on top of everything)
     :param y_label:
     :param y_lim: tuple of int,
     :param link_scatter: draw a line between scatters
@@ -1592,6 +1601,22 @@ def plot_scatter_family(data_dict, colors_dict,
             ax1.hlines(y_value, min_x_value,
                        max_x_value, color=labels_color, linewidth=0.5,
                        linestyles="dashed", zorder=25)
+
+    if plot_extra_lines_dict is not None:
+        for label_line, line_data_dict in plot_extra_lines_dict.items():
+            # m, b = np.polyfit(x, y, deg=1)
+            legend_line = None
+            if "legend" in line_data_dict:
+                legend_line = line_data_dict["legend"]
+            if "slope" in line_data_dict:
+                plt.axline(xy1=(0, line_data_dict["b"]), slope=line_data_dict["slope"],
+                           label=f'$y = {line_data_dict["slope"]:.1f}x {line_data_dict["b"]:+.1f}$')
+            else:
+                ax1.plot(line_data_dict["x"], line_data_dict["y"],
+                         zorder=line_data_dict["zorder"],
+                         color=line_data_dict["color"],
+                         linewidth=line_data_dict["linewidth"], linestyle=line_data_dict["linestyles"],
+                         label=legend_line)
 
     ax1.set_ylabel(f"{y_label}", fontsize=30, labelpad=20)
     if y_lim is not None:

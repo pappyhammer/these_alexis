@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 import random
-from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS
+from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS, plot_scatter_family
 from asthma_entry import from_csv_to_asthma_entries
 from utils import sort_two_list
 from code_alexis import table_1_alexis
@@ -129,10 +129,129 @@ def md_ranking(asthma_entries):
     mds = list(md_dict.keys())
     n_entries_by_md = list(md_dict.values())
     n_entries_by_md, mds = sort_two_list(main_list=n_entries_by_md, second_list=mds, order="descending")
-    top_to_display = min(5, len(md_dict))
+    top_to_display = min(40, len(md_dict))
     for index_to_display in range(top_to_display):
         print(
             f"Top {index_to_display + 1}: {mds[index_to_display]} avec {n_entries_by_md[index_to_display]} questionnaires")
+
+
+def plot_sao2_iao(all_entries, entries_groups_dict, path_results):
+    box_plot_dict = dict()
+
+    for key_group, entries in entries_groups_dict.items():
+        values = [getattr(e, "sao2_iao") for e in entries]
+        values = list(filter(lambda v: v is not None, values))
+        box_plot_dict[key_group] = values
+
+    with_box_plot = False
+    if with_box_plot:
+        filename = "sao2_iao_by_group"
+        ordered_labels = list(box_plot_dict.keys())
+        ordered_labels.sort()
+        plot_box_plots(data_dict=box_plot_dict, filename=filename,
+                       y_label="SaO2 (%)",
+                       box_in_front=True,
+                       ordered_labels=ordered_labels,
+                       scatter_text_dict=None,
+                       colors=BREWER_COLORS[:len(box_plot_dict)],
+                       path_results=path_results, y_lim=None,
+                       x_label=None, with_scatters=True,
+                       xticklabels_dict=None,
+                       y_log=False,
+                       scatters_with_same_colors=None,
+                       special_scatters=None,
+                       scatter_size=20,
+                       scatter_alpha=0.5,
+                       box_alpha=0.8,
+                       h_lines_y_values=None,
+                       h_lines_colors=None,
+                       h_lines_styles="dashed",
+                       n_sessions_dict=None,
+                       y_ticks_locations=None,
+                       y_ticks_labels=None,
+                       median_color=None,
+                       background_color="white",
+                       link_medians=None,
+                       link_means=None,
+                       link_data_points=None,
+                       color_link_medians="red",
+                       color_link_data_point="red",
+                       labels_color="black",
+                       with_y_jitter=None,
+                       x_labels_rotation=45,
+                       fliers_symbol=None,
+                       save_formats="png",
+                       dpi=500,
+                       xkcd_mode=False,
+                       with_timestamp_in_file_name=True)
+
+    data_dict = dict()
+    colors_dict = dict()
+    filename = "sao2_iao_n_salbu"
+    y_label = "# salbu"
+    key_labels = ["all"]
+    colors_dict["all"] = "cornflowerblue"
+    data_dict["all"] = [[], []]
+    x_for_linear_regression = []
+    y_for_linear_regression = []
+
+    for entry in all_entries:
+        if entry.sao2_iao is None:
+            continue
+        if entry.n_nebu_salbu is None:
+            continue
+
+        data_dict["all"][0].append(entry.sao2_iao)
+        data_dict["all"][1].append(entry.n_nebu_salbu)
+        x_for_linear_regression.append(entry.sao2_iao)
+        y_for_linear_regression.append(entry.n_nebu_salbu)
+
+    label_to_legend = None
+    m, b, *_ = stats.linregress(x_for_linear_regression, y_for_linear_regression)
+    print(f"Linear regression y = {m:.1f}x {b:+.1f}")
+    plot_extra_lines_dict = dict()
+    regression_line_dict = dict()
+    plot_extra_lines_dict["regression_line"] = regression_line_dict
+    regression_line_dict["x"] = [x for x in range(min(x_for_linear_regression), max(x_for_linear_regression) + 1)]
+    regression_line_dict["y"] = [(m * x) + b for x in
+                                 range(min(x_for_linear_regression), max(x_for_linear_regression) + 1)]
+    regression_line_dict["legend"] = f'$y = {m:.1f}x {b:+.1f}$'
+    regression_line_dict["zorder"] = 40
+    regression_line_dict["color"] = "black"
+    regression_line_dict["linewidth"] = 1
+    regression_line_dict["linestyles"] = "dashed"
+
+    plot_scatter_family(data_dict, colors_dict,
+                        filename,
+                        y_label,
+                        label_to_legend=label_to_legend,
+                        marker_to_legend=None,
+                        path_results=path_results, y_lim=None,
+                        x_label=None,
+                        x_ticks_labels=None,
+                        x_ticks_pos=None,
+                        y_ticks_labels=None,
+                        y_ticks_pos=None,
+                        y_log=False,
+                        scatter_size=150,
+                        scatter_alpha=1,
+                        background_color="white",
+                        lines_plot_values=None,
+                        plots_linewidth=2,
+                        plot_extra_lines_dict=plot_extra_lines_dict,
+                        link_scatter=False,
+                        labels_color="black",
+                        with_x_jitter=0.5,
+                        with_y_jitter=0.5,
+                        x_labels_rotation=None,
+                        h_lines_y_values=None,
+                        with_text=True,
+                        default_marker='o',
+                        text_size=5,
+                        save_formats="png",
+                        dpi=200,
+                        cmap=None,
+                        with_timestamp_in_file_name=True)
 
 
 def main():
@@ -173,30 +292,36 @@ def main():
     md_ranking(asthma_entries)
 
     entries_groups = dict()
-    entries_groups["< 6 ans"] = list(filter(lambda e: e.age_years < 6, asthma_entries))
-    entries_groups[">= 6 ans"] = list(filter(lambda e: e.age_years >= 6, asthma_entries))
-    entries_groups["6 - 11 ans"] = list(filter(lambda e: 6 <= e.age_years < 12, asthma_entries))
-    entries_groups["12 - 18 ans"] = list(filter(lambda e: 12 <= e.age_years < 18, asthma_entries))
+    entries_groups["< 6 ans"] = list(filter(lambda e: e.less_than_6_y, asthma_entries))
+    entries_groups[">= 6 ans"] = list(filter(lambda e: not e.less_than_6_y, asthma_entries))
+    entries_groups["6 - 11 ans"] = list(filter(lambda e: e.age_years is not None and 6 <= e.age_years < 12,
+                                               asthma_entries))
+    entries_groups["12 - 18 ans"] = list(filter(lambda e: e.age_years is not None and 12 <= e.age_years < 18,
+                                                asthma_entries))
     entries_groups["RAD"] = list(filter(lambda e: (not e.is_hospit_tradi) and (not e.is_hospit_rea), asthma_entries))
     entries_groups["Hospit tradi"] = list(filter(lambda e: e.is_hospit_tradi, asthma_entries))
     entries_groups["Hospit rea"] = list(filter(lambda e: e.is_hospit_rea, asthma_entries))
+    entries_groups["Ecole de l'asthme"] = list(filter(lambda e: e.ecole_asthme_connue_et_contact, asthma_entries))
+    entries_groups["Pas d'ecole de l'asthme"] = list(filter(lambda e: not e.ecole_asthme_connue_et_contact,
+                                                            asthma_entries))
     entries_groups["Effectif total"] = asthma_entries
 
     # table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
     groups_to_compute_p = ["< 6 ans", ">= 6 ans"]
-    create_table_1(entries_groups=entries_groups, path_results=path_results, all_group_key="Effectif total",
+    create_table_1(entries_groups_dict=entries_groups, path_results=path_results, all_group_key="Effectif total",
                    with_p_stat=False,
                    groups_to_compute_p=groups_to_compute_p)
+    plot_sao2_iao(entries_groups_dict=entries_groups, path_results=path_results, all_entries=asthma_entries)
 
 
-def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_stat=True,
+def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with_p_stat=True,
                    groups_to_compute_p=None):
     output_dict = dict()
     output_dict[""] = []
 
     # TODO: χ2 used for categorical variables and t test used for continuous variables.
 
-    for key_group in entries_groups.keys():
+    for key_group in entries_groups_dict.keys():
         output_dict[key_group] = []
 
     # key is the line in output_dict to fill afterwards
@@ -206,14 +331,14 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
     index_group = 0
     index_group_for_stat = 0
 
-    for key_group, group_entries in entries_groups.items():
+    for key_group, group_entries in entries_groups_dict.items():
         # N
         if index_group == 0:
             output_dict[""].append("N")
         n_entries = len(group_entries)
         extra_str = ""
         if all_group_key is not None and key_group != all_group_key:
-            perc_n = (n_entries / len(entries_groups[all_group_key])) * 100
+            perc_n = (n_entries / len(entries_groups_dict[all_group_key])) * 100
             extra_str = f" ({perc_n:.1f}%)"
         output_dict[key_group].append(f"{n_entries}{extra_str}")
 
@@ -229,7 +354,9 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
         # age
         if index_group == 0:
             output_dict[""].append("Age (années)")
+
         ages = [e.age_years_float for e in group_entries]
+        ages = list(filter(lambda v: v is not None, ages))
         median_age = np.median(ages)
         p_25 = np.percentile(ages, 25)
         p_75 = np.percentile(ages, 75)
@@ -330,7 +457,8 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
         output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
 
         # booleans
-        # allergies_classiques	allergies_autres	atcd_cortico_6_mois	atcd_rea	atcd_hospit
+
+        #
         bool_attr_to_name_dict = {"enfant_danger": "Senti enfant en danger ?",
                                   "impuissant": "Sensation d'être impuissant",
                                   "ressources_full_mode": "Utilisation toutes les ressources thérapeutiques",
@@ -353,9 +481,45 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
                                   "allergies_classiques": "Allergies classiques",
                                   "atcd_cortico_6_mois": "A recu des corticoides dans les 6 mois precedent",
                                   "atcd_rea": "Antecedent rea",
-                                  "atcd_hospit": "Antecedent hospit tradi"
+                                  "atcd_hospit": "Antecedent hospit tradi",
+                                  "ttt_de_fond_flixotide": "Ttt de fond Flixotide",
+                                  "ttt_de_fond_seretide": "Ttt de fond Seretide",
+                                  "ttt_de_fond_singulair": "Ttt de fond Seretide",
+                                  "ttt_de_fond_ne_sais_pas": "Ttt de fond non connu",
+                                  "ttt_de_fond_aucun": "Pas de ttt de fond",
+                                  "ecole_asthme_connue_et_contact": "Ecole de l'asthme connue et consultee",
+                                  "ecole_asthme_connue_sans_contact": "Ecole de l'asthme connue uniquement",
+                                  "ecole_asthme_non_connue": "Ecole de l'asthme non connue",
+                                  "chambre_inhalation": "Pense bien savoir utiliser la chambre d'inhalation",
+                                  "calendrier_crise": "Tenue d'un calendrier de crise",
+                                  "peack_flow": "Peack flow à la maison",
+                                  "peack_flow_bien_utilise": "Pense bien savoir utiliser le peack flow",
+                                  "plan_action_maison": "Plan d'action present au domicile",
+                                  "plan_action_suivi": "Plan d'action suivi",
+                                  "plan_action_des_urgences_si_present": "Plan d'action fourni par les urgences",
+                                  "prescription_vento": "Vento ou prescription dispo",
+                                  "ttt_vento_avant_urgences": "Vento donnee avant arrivee urgences",
+                                  "ttt_cortico_avant_urgences": "Cortico donnes avant arrivee urgences",
+                                  "aucun_ttt_avant_urgences": "Aucun ttt donne avant arrivee urgences",
+                                  "correct_n_bouffee_vento": "Bon nombre de bouffees par rapport au poids",
+                                  "inf_20m_entre_series_vento": "Intervalle prise vento < 20 min ",
+                                  "entre_20m_1h_entre_series_vento": "Intervalle prise vento 20 min - 1h",
+                                  "entre_1h_4h_entre_series_vento": "Intervalle prise vento 1h - 4h",
+                                  "plus_4h_entre_series_vento": "Intervalle prise vento > 4h",
+                                  "delai_urg_inf_2h": "Delai entre debut symptome et cs urgences < 2h",
+                                  "delai_urg_2h_6h": "Delai entre debut symptome et cs urgences 2h - 6h",
+                                  "delai_urg_6h_24h": "Delai entre debut symptome et cs urgences 6h - 24h",
+                                  "delai_urg_sup_24h": "Delai entre debut symptome et cs urgences > 24h",
+                                  "appel_du_15": "Appel du SAMU",
+                                  "n_repet_series_vento_0": "0 serie de vento",
+                                  "n_repet_series_vento_1": "1 serie de vento",
+                                  "n_repet_series_vento_2": "2 serie de vento",
+                                  "n_repet_series_vento_sup_3": ">= 3 serie de vento",
+                                  "n_respi_chbre_inhalation_sup_10": "Au moins 10 respirations ou 10 sec dans chambre"
                                   # "": "",
                                   }
+
+        # 	n_respi_chbre_inhalation
 
         for attr_name, label_data in bool_attr_to_name_dict.items():
             if index_group == 0:
@@ -370,11 +534,11 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
                 output_dict[key_group].append("0 / 0")
             else:
                 perc_value = (n_values / n_total) * 100
-
-                if n_total != len(group_entries):
-                    output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
-                else:
-                    output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
+                output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+                # if n_total != len(group_entries):
+                #     output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+                # else:
+                #     output_dict[key_group].append(f"{n_values} ({perc_value:.1f} %)")
 
         # continuous values
         wait_time_attr_to_name_dict = {"age_premiere_ventoline": "Age premiere ventoline (mois)"
@@ -404,6 +568,29 @@ def create_table_1(entries_groups, path_results, all_group_key="Tous", with_p_st
             output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
         else:
             output_dict[key_group].append("0 / 0")
+
+        score_ranges = [(0, 2), (3, 5), (6, 7), (8, 10)]
+        score_labels = ["mauvais", "modere", "bon", "parfait"]
+
+        for score_range, score_label in zip(score_ranges, score_labels):
+
+            if index_group == 0:
+                output_dict[""].append(f"Score qualite: {score_label} ({score_range[0]}-{score_range[1]})")
+
+            n_total = 0
+            n_values = 0
+            for entry in group_entries:
+                if entry.score_quality is None:
+                    continue
+                n_total += 1
+                if score_range[0] <= entry.score_quality <= score_range[1]:
+                    n_values += 1
+            if n_total > 0:
+                perc_value = (n_values / n_total) * 100
+                output_dict[key_group].append(f"{n_values} / {n_total} ({perc_value:.1f} %)")
+            else:
+                output_dict[key_group].append("0 / 0")
+
 
         index_group += 1
         if key_group in groups_to_compute_p:
