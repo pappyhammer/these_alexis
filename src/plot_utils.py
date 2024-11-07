@@ -818,6 +818,9 @@ def plot_stacked_bar(data_dict,
                      y_label,
                      x_ticks_label_size,
                      filename,
+                     figsize=(12, 12),
+                     group_bars=False,
+                     grouped_bar_order=None,
                      color_each_bar=False,
                      h_lines_y_values=None,
                      h_lines_colors=None,
@@ -828,6 +831,7 @@ def plot_stacked_bar(data_dict,
                      bars_text_dict=None,
                      bars_text_color="white",
                      width_bar=0.5,
+                     y_lim=None,
                      background_color="black",
                      labels_color="white",
                      x_ticks_vertical_rotation=True,
@@ -842,8 +846,10 @@ def plot_stacked_bar(data_dict,
 
     :param data_dict:  len == number of bar, key is the xticks label (str), value is a list of float
     or int representing a subpart of a bar
-    :param data_colors: list of colors, same order as the data in data_dict values
-    :param data_legends: list of str, same order as the data in data_dict values
+    :param data_colors: list of colors, same order as the data in data_dict values.
+    If grouped_bar_dict is not None, color_each_bar data_colors should be a dict
+    with key the label of tha bar and value a color
+    :param data_legends: list of str, same order as the data in data_dict values (if 4 stacked data, len == 4)
     :param x_ticks_labels: list of str, each one should be in  data_dict keys, the order of the list will be the order of the bar
     :param bars_text_dict: if None, no text is displayed in the bars, if not, dict with keys being the xticks label
     (str), value is a list of str representing the text to display in the subpart of a bar (list should be the same
@@ -858,6 +864,9 @@ def plot_stacked_bar(data_dict,
     :param y_label:
     :param x_ticks_label_size:
     :param filename:
+    :param group_bars: if True, data_dict will allow to group the bar in groups.
+    with key a label (str) and value a dict with sub_label and value a list of float/int for stacked
+    :param grouped_bar_order: if not None, used for grouped_bar_dict to order the grouped label
     :param y_ticks_locations:
     :param y_ticks_labels:
     :param x_ticks_colors_dict: key is x_tick_label str, and value a color. if None or no color for a given label
@@ -878,7 +887,7 @@ def plot_stacked_bar(data_dict,
 
     fig, axe_plot = plt.subplots(nrows=1, ncols=1,
                                  gridspec_kw={'height_ratios': [1]},
-                                 figsize=(12, 12), dpi=dpi)
+                                 figsize=figsize, dpi=dpi)
 
     if xkcd_mode:
         plt.xkcd()
@@ -887,42 +896,123 @@ def plot_stacked_bar(data_dict,
 
     fig.patch.set_facecolor(background_color)
 
-    x_pos = np.arange(0, len(x_ticks_labels))
-    plt_bar_list = [None] * len(data_legends)
-    for x_ticks_index, x_ticks_label in enumerate(x_ticks_labels):
-        # linewidth = np.repeat(1, len(x_ticks_labels))
-        # linewidth[reg_variants_freq[i, :] == 0] = 0
-        bar_values = data_dict[x_ticks_label]
-        for index_bar_value, bar_value in enumerate(bar_values):
-            if color_each_bar:
-                p = plt.bar(x_ticks_index,
-                            bar_value, color=data_colors[x_ticks_index],
-                            edgecolor=background_color, linewidth=1, width=width_bar,
-                            bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
-            else:
-                p = plt.bar(x_ticks_index,
-                            bar_value, color=data_colors[index_bar_value],
-                            edgecolor=background_color, linewidth=1, width=width_bar,
-                            bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
-            plt_bar_list[index_bar_value] = p
-        if bars_text_dict:
-            bars_text_data = bars_text_dict[x_ticks_label]
-            for index_bar_value, bar_text in enumerate(bars_text_data):
-                if bar_values[index_bar_value] == 0:
-                    # no text if no bar
-                    continue
-                y_pos = np.sum(bar_values[:index_bar_value]) + (bar_values[index_bar_value] / 2)
-                fontsize = 14
-                if len(x_ticks_labels) > 3:
-                    fontsize -= 1
-                if len(x_ticks_labels) > 6:
-                    fontsize -= 5
-                if len(x_ticks_labels) > 20:
-                    fontsize -= 3
-                plt.text(x=x_ticks_index, y=y_pos,
-                         s=str(bar_text),
-                         color=bars_text_color, zorder=22,
-                         ha='center', va="center", fontsize=fontsize, fontweight='bold')
+    # grouped_bar_dict with key label and value list of label in data_dict to group
+    # grouped_bar_order = list of str
+    # groups_with_unique_label = list of str, identify which group should have only one label
+    # if
+
+    if group_bars:
+        # the label locations
+        x_pos = []
+        x_ticks_labels = []
+        current_offset = 0
+        if grouped_bar_order is None:
+            grouped_bar_order = list(data_dict.keys())
+
+        # to know the width bar, we look for the group with the max length
+        max_group_len = 0
+        for labels_in_group_dict in data_dict.values():
+            max_group_len = max(max_group_len, len(labels_in_group_dict))
+
+        width_bar = 1 / (max_group_len + 1)
+        plt_bar_list = [None] * max_group_len
+
+        n_total_x_ticks_labels = 0
+        for grouped_bar_main_label in grouped_bar_order:
+            if grouped_bar_main_label in data_dict:
+                labels_in_group_dict = data_dict[grouped_bar_main_label]
+                n_total_x_ticks_labels += len(labels_in_group_dict)
+
+        for grouped_bar_main_label in grouped_bar_order:
+            if grouped_bar_main_label not in data_dict:
+                continue
+            labels_in_group_dict = data_dict[grouped_bar_main_label]
+            x_pos.append(current_offset + ((max_group_len * width_bar) / 2) - (width_bar / 2))
+            # if len(labels_in_group_dict) == 1:
+            #     x_ticks_labels.append(list(labels_in_group_dict.keys())[0])
+            # else:
+            x_ticks_labels.append(grouped_bar_main_label)
+            index_label_in_group = 0
+            for label_in_group, bar_values in labels_in_group_dict.items():
+                # bar_values = data_dict[label_in_group]
+                x_ticks_index = current_offset
+                for index_bar_value, bar_value in enumerate(bar_values):
+                    if color_each_bar:
+                        p = plt.bar(x_ticks_index,
+                                    bar_value, color=data_colors[label_in_group],
+                                    edgecolor=background_color, linewidth=1, width=width_bar,
+                                    bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
+                    else:
+                        p = plt.bar(x_ticks_index,
+                                    bar_value, color=data_colors[index_bar_value],
+                                    edgecolor=background_color, linewidth=1, width=width_bar,
+                                    bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
+                    plt_bar_list[index_label_in_group] = p
+                index_label_in_group += 1
+                if bars_text_dict:
+                    if grouped_bar_main_label in bars_text_dict and \
+                            label_in_group in bars_text_dict[grouped_bar_main_label]:
+                        bars_text_data = bars_text_dict[grouped_bar_main_label][label_in_group]
+                        for index_bar_value, bar_text in enumerate(bars_text_data):
+                            if bar_values[index_bar_value] == 0:
+                                # no text if no bar
+                                continue
+                            y_pos = np.sum(bar_values[:index_bar_value]) + (bar_values[index_bar_value] / 2)
+                            fontsize = 14
+                            if n_total_x_ticks_labels > 3:
+                                fontsize -= 1
+                            if n_total_x_ticks_labels > 6:
+                                fontsize -= 5
+                            if n_total_x_ticks_labels > 20:
+                                fontsize -= 3
+                            plt.text(x=x_ticks_index, y=y_pos,
+                                     s=str(bar_text),
+                                     color=bars_text_color, zorder=22,
+                                     ha='center', va="center", fontsize=fontsize, fontweight='bold')
+
+                current_offset += width_bar
+            # leaving a space between each group
+            current_offset += width_bar
+
+    else:
+        x_pos = np.arange(0, len(x_ticks_labels))
+        plt_bar_list = [None] * len(data_legends)
+        for x_ticks_index, x_ticks_label in enumerate(x_ticks_labels):
+            # linewidth = np.repeat(1, len(x_ticks_labels))
+            # linewidth[reg_variants_freq[i, :] == 0] = 0
+            bar_values = data_dict[x_ticks_label]
+            for index_bar_value, bar_value in enumerate(bar_values):
+                if color_each_bar:
+                    p = plt.bar(x_ticks_index,
+                                bar_value, color=data_colors[x_ticks_index],
+                                edgecolor=background_color, linewidth=1, width=width_bar,
+                                bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
+                else:
+                    p = plt.bar(x_ticks_index,
+                                bar_value, color=data_colors[index_bar_value],
+                                edgecolor=background_color, linewidth=1, width=width_bar,
+                                bottom=np.sum(bar_values[:index_bar_value]), zorder=18)
+                plt_bar_list[index_bar_value] = p
+            if bars_text_dict:
+                bars_text_data = bars_text_dict[x_ticks_label]
+                for index_bar_value, bar_text in enumerate(bars_text_data):
+                    if bar_values[index_bar_value] == 0:
+                        # no text if no bar
+                        continue
+                    y_pos = np.sum(bar_values[:index_bar_value]) + (bar_values[index_bar_value] / 2)
+                    fontsize = 14
+                    if len(x_ticks_labels) > 3:
+                        fontsize -= 1
+                    if len(x_ticks_labels) > 6:
+                        fontsize -= 5
+                    if len(x_ticks_labels) > 20:
+                        fontsize -= 3
+                    if len(x_ticks_labels) > 40:
+                        fontsize -= 3
+                    plt.text(x=x_ticks_index, y=y_pos,
+                             s=str(bar_text),
+                             color=bars_text_color, zorder=22,
+                             ha='center', va="center", fontsize=fontsize, fontweight='bold')
 
     if h_lines_y_values:
         for h_lines_y_value in h_lines_y_values:
@@ -959,9 +1049,14 @@ def plot_stacked_bar(data_dict,
     if y_ticks_locations is not None and y_ticks_labels is not None:
         plt.yticks(y_ticks_locations, y_ticks_labels)
     axe_plot.tick_params(axis='y', colors=labels_color)
-    # axe_plot.tick_params(axis='x', colors=labels_color)
     # removing the ticks but not the labels
-    axe_plot.xaxis.set_ticks_position('none')
+    if group_bars is None:
+        axe_plot.xaxis.set_ticks_position('none')
+    else:
+        axe_plot.tick_params(axis='x', colors=labels_color, size=5, width=2)
+
+    # axe_plot.xaxis.set_ticks_position('none')
+
     axe_plot.yaxis.set_tick_params(labelsize=15)
     plt.ylabel(y_label, fontweight="bold", fontsize=30, labelpad=20)
     if x_label is not None:
@@ -971,6 +1066,9 @@ def plot_stacked_bar(data_dict,
 
     if len(data_dict) == 1:
         axe_plot.set_xlim(-1, 1)
+
+    if y_lim is not None:
+        axe_plot.set_ylim(y_lim[0], y_lim[1])
 
     # grid
     # for i in np.arange(1, int(np.ceil(local_max_variant_freq) + 1)):
@@ -1871,3 +1969,155 @@ def plot_serie_of_values(results_path, time_x_values, y_values, color_plot, x_la
                         facecolor=fig.get_facecolor())
     if ax_to_use is None:
         plt.close()
+
+
+def plot_group_bar_chart_from_entries(entries, fct_by_level, filename, y_label,
+                                      main_labels, sub_labels, percentage_in_y,
+                                      path_results, save_formats, dpi,
+                                      figsize=(12, 12),
+                                      with_text=True,
+                                      text_with_percentage=True,
+                                      x_ticks_label_size=15, x_ticks_rotation_angle=45,
+                                      bars_text_color="black", background_color="black",
+                                      labels_color="white",
+                                      data_colors=None):
+    """
+
+    :param entries: list of Entry
+    :param fct_by_level: list of fct, should 2 fct max, each fct take an entry and return a value (str or number)
+    :param filename: str
+    :param y_label: (str)
+    :param main_labels: list of the main_labels (will be the X-Axis label), should be return by the first fct
+    in fct_by_level. The order in the list will be the order then
+    :param sub_labels: 2nd level label, order is respected
+    :param percentage_in_y: if True, then percentage are in the Y axis, otherwise it will be a numerical value
+    :param path_results:
+    :param save_formats:
+    :param dpi:
+    :param with_text: if True, text will be plotted in the bar (default is the n)
+    :param text_with_percentage: if True, percentages is added in bar text
+    :param x_ticks_label_size:
+    :param x_ticks_rotation_angle:
+    :param bars_text_color: (color)
+    :param background_color: (color)
+    :param labels_color: (color)
+    :param data_colors: (dict) if None Brewer colors are used, otherwise key of the dict should be the sub_labels
+    :return:
+    """
+    data_tree_dict = build_tree_dict_for_plots_from_entries(entries=entries,
+                                                            fct_by_level=fct_by_level)
+
+    data_dict_stacked = dict()
+    if data_colors is None:
+        data_colors = dict()
+    index_color = 0
+    data_legends = None
+    bars_text_dict = dict()
+    for main_label in main_labels:
+        if main_label not in data_tree_dict:
+            continue
+        sub_data_dict = data_tree_dict[main_label]
+        total_value = 0
+        data_dict_stacked[main_label] = dict()
+        bars_text_dict[main_label] = dict()
+        for sub_label in sub_labels:
+            if sub_label in sub_data_dict:
+                value = sub_data_dict[sub_label]
+            else:
+                value = 0
+            if sub_label not in data_colors:
+                data_colors[sub_label] = BREWER_COLORS[index_color]
+                index_color += 1
+
+            total_value += value
+
+        initiate_data_legends = False
+
+        if data_legends is None:
+            initiate_data_legends = True
+            data_legends = []
+
+        for sub_label in sub_labels:
+            if sub_label in sub_data_dict:
+                value = sub_data_dict[sub_label]
+            else:
+                value = 0
+            # we want a unique key for each bar
+            # sub_label_key = main_label + " " + sub_label
+            perc_value = (value / total_value) * 100
+            if percentage_in_y:
+                data_dict_stacked[main_label][sub_label] = [perc_value]
+            else:
+                data_dict_stacked[main_label][sub_label] = [value]
+
+            if initiate_data_legends:
+                data_legends.append(sub_label)
+            if value > 0:
+                if text_with_percentage:
+                    bars_text_dict[main_label][sub_label] = [f"{round(perc_value)}%\n{value}"]
+                else:
+                    bars_text_dict[main_label][sub_label] = [f"{value}"]
+
+    grouped_bar_order = main_labels
+    color_each_bar = True
+
+    if not with_text:
+        bars_text_dict = None
+
+    plot_stacked_bar(data_dict=data_dict_stacked,
+                     data_colors=data_colors,
+                     color_each_bar=color_each_bar,
+                     figsize=figsize,
+                     x_ticks_colors_dict=None,
+                     data_legends=data_legends,
+                     bars_text_dict=bars_text_dict,
+                     bars_text_color=bars_text_color,
+                     background_color=background_color,
+                     labels_color=labels_color,
+                     x_ticks_labels=None,
+                     group_bars=True,
+                     grouped_bar_order=grouped_bar_order,
+                     path_results=path_results,
+                     h_lines_y_values=None,
+                     y_label=y_label,
+                     x_ticks_label_size=x_ticks_label_size,
+                     x_ticks_vertical_rotation=True,
+                     x_ticks_rotation_angle=x_ticks_rotation_angle,
+                     filename=filename,
+                     save_formats=save_formats,
+                     dpi=dpi)
+
+
+def build_tree_dict_for_plots_from_entries(entries, fct_by_level):
+    """
+    return a tree than can be given as parameters to the function plot_sunburst or plot_stacked_bars
+    :param entries: list of entries
+    :param fct_by_level: list of function that take an entry as parameters and return a string representing
+    the description of a field
+    :return:
+    """
+    data_tree_dict = dict()
+    n_level = len(fct_by_level)
+    for entry in entries:
+        skip_entry = False
+        last_level_dict = data_tree_dict
+        for index_fct, fct in enumerate(fct_by_level):
+            # we don't check if it exist, it will raise an exception if not
+            value = fct(entry)
+            if value is None:
+                skip_entry = True
+                break
+
+            if index_fct < n_level - 1:
+                if value not in last_level_dict:
+                    last_level_dict[value] = dict()
+                last_level_dict = last_level_dict[value]
+            else:
+                if value not in last_level_dict:
+                    last_level_dict[value] = 1
+                else:
+                    last_level_dict[value] += 1
+
+        if skip_entry:
+            continue
+    return data_tree_dict

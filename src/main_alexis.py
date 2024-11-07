@@ -5,10 +5,11 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 import random
-from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS, plot_scatter_family
+from plot_utils import plot_box_plots, plot_pie_chart, BREWER_COLORS, plot_scatter_family, \
+    plot_group_bar_chart_from_entries
 from asthma_entry import from_csv_to_asthma_entries
 from utils import sort_two_list
-from code_alexis import table_1_alexis
+# from code_alexis import table_1_alexis
 
 
 def count_boolean_attr_in_entries(entries, attr_name):
@@ -291,6 +292,7 @@ def main():
 
     md_ranking(asthma_entries)
 
+    all_group_key = "Effectif total"
     entries_groups = dict()
     entries_groups["< 6 ans"] = list(filter(lambda e: e.less_than_6_y, asthma_entries))
     entries_groups[">= 6 ans"] = list(filter(lambda e: not e.less_than_6_y, asthma_entries))
@@ -304,17 +306,93 @@ def main():
     entries_groups["Ecole de l'asthme"] = list(filter(lambda e: e.ecole_asthme_connue_et_contact, asthma_entries))
     entries_groups["Pas d'ecole de l'asthme"] = list(filter(lambda e: not e.ecole_asthme_connue_et_contact,
                                                             asthma_entries))
-    entries_groups["Effectif total"] = asthma_entries
+    entries_groups["Score mauvais"] = list(filter(lambda e: e.score_quality is not None and e.score_quality <= 3,
+                                                  asthma_entries))
+    entries_groups["Score modere"] = list(filter(lambda e: e.score_quality is not None and 4 <= e.score_quality <= 6,
+                                                 asthma_entries))
+    entries_groups["Score bon"] = list(filter(lambda e: e.score_quality is not None and 7 <= e.score_quality <= 8,
+                                              asthma_entries))
+    entries_groups["Score parfait"] = list(filter(lambda e: e.score_quality is not None and 9 <= e.score_quality <= 10,
+                                                  asthma_entries))
+    entries_groups["Bien controle"] = list(filter(lambda e: e.well_controlled is not None and e.well_controlled,
+                                                  asthma_entries))
+    entries_groups["Partiellement controle"] = list(filter(lambda e: e.partly_controlled is not None
+                                                                     and e.partly_controlled, asthma_entries))
+    entries_groups["Non controle"] = list(filter(lambda e: e.uncontrolled is not None and e.uncontrolled,
+                                                 asthma_entries))
+
+    entries_groups[all_group_key] = asthma_entries
+
+    dpi = 700
+    save_formats = "png"
 
     # table_1_alexis(asthma_entries=asthma_entries, path_results=path_results)
     groups_to_compute_p = ["< 6 ans", ">= 6 ans"]
-    create_table_1(entries_groups_dict=entries_groups, path_results=path_results, all_group_key="Effectif total",
+    create_table_1(entries_groups_dict=entries_groups, path_results=path_results,
+                   table_title="full",
+                   all_group_key=all_group_key,
                    with_p_stat=False,
                    groups_to_compute_p=groups_to_compute_p)
+
     plot_sao2_iao(entries_groups_dict=entries_groups, path_results=path_results, all_entries=asthma_entries)
 
+    bars_group_dict = {"ecole_asthme": ["Ecole de l'asthme", "Pas d'ecole de l'asthme"],
+                       "age": ["< 6 ans", "6 - 11 ans", "12 - 18 ans"],
+                       "orientation": ["RAD", "Hospit tradi", "Hospit rea"],
+                       "score": ["Score mauvais", "Score modere", "Score bon", "Score parfait"],
+                       "controle": ["Bien controle", "Partiellement controle", "Non controle"]}
 
-def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with_p_stat=True,
+    for table_title, group_labels in bars_group_dict.items():
+        bars_entries_groups = dict()
+        for group_label in group_labels:
+            bars_entries_groups[group_label] = entries_groups[group_label]
+        bars_entries_groups[all_group_key] = entries_groups[all_group_key]
+        create_table_1(entries_groups_dict=bars_entries_groups, path_results=path_results,
+                       table_title=table_title,
+                       all_group_key=all_group_key,
+                       with_p_stat=False)
+
+    # extra_filename = "full"
+    # plot_score_bars(entries_groups=entries_groups, path_results=path_results, extra_filename=extra_filename,
+    #                 all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
+
+    for score_type in ["simple", "complexe"]:
+        if score_type == "complexe":
+            score_ranges = [(0, 3), (4, 6), (7, 8), (9, 10)]
+            score_labels = ["mauvais", "modere", "bon", "parfait"]
+        else:
+            score_ranges = [(0, 6), (7, 10)]
+            score_labels = ["mauvais", "bon"]
+        for extra_filename, group_labels in bars_group_dict.items():
+            bars_entries_groups = dict()
+            for group_label in group_labels:
+                bars_entries_groups[group_label] = entries_groups[group_label]
+            bars_entries_groups[all_group_key] = entries_groups[all_group_key]
+            plot_score_bars(entries_groups=bars_entries_groups, path_results=path_results,
+                            extra_filename=extra_filename + f"_score_{score_type}",
+                            score_ranges=score_ranges, score_labels=score_labels,
+                            all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
+
+    for extra_filename, group_labels in bars_group_dict.items():
+        bars_entries_groups = dict()
+        for group_label in group_labels:
+            bars_entries_groups[group_label] = entries_groups[group_label]
+        bars_entries_groups[all_group_key] = entries_groups[all_group_key]
+        plot_control_bars(entries_groups=bars_entries_groups, path_results=path_results,
+                          extra_filename=extra_filename,
+                          all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
+
+    for extra_filename, group_labels in bars_group_dict.items():
+        bars_entries_groups = dict()
+        for group_label in group_labels:
+            bars_entries_groups[group_label] = entries_groups[group_label]
+        bars_entries_groups[all_group_key] = entries_groups[all_group_key]
+        plot_suivi_bars(entries_groups=bars_entries_groups, path_results=path_results,
+                          extra_filename=extra_filename,
+                          all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
+
+
+def create_table_1(entries_groups_dict, path_results, table_title, all_group_key="Tous", with_p_stat=True,
                    groups_to_compute_p=None):
     output_dict = dict()
     output_dict[""] = []
@@ -484,7 +562,7 @@ def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with
                                   "atcd_hospit": "Antecedent hospit tradi",
                                   "ttt_de_fond_flixotide": "Ttt de fond Flixotide",
                                   "ttt_de_fond_seretide": "Ttt de fond Seretide",
-                                  "ttt_de_fond_singulair": "Ttt de fond Seretide",
+                                  "ttt_de_fond_singulair": "Ttt de fond Singulair",
                                   "ttt_de_fond_ne_sais_pas": "Ttt de fond non connu",
                                   "ttt_de_fond_aucun": "Pas de ttt de fond",
                                   "ecole_asthme_connue_et_contact": "Ecole de l'asthme connue et consultee",
@@ -569,13 +647,13 @@ def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with
         else:
             output_dict[key_group].append("0 / 0")
 
-        score_ranges = [(0, 2), (3, 5), (6, 7), (8, 10)]
+        score_ranges = [(0, 3), (4, 6), (7, 8), (9, 10)]
         score_labels = ["mauvais", "modere", "bon", "parfait"]
 
         for score_range, score_label in zip(score_ranges, score_labels):
 
             if index_group == 0:
-                output_dict[""].append(f"Score qualite: {score_label} ({score_range[0]}-{score_range[1]})")
+                output_dict[""].append(f"Score qualite {score_label} ({score_range[0]}-{score_range[1]})")
 
             n_total = 0
             n_values = 0
@@ -593,8 +671,9 @@ def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with
 
 
         index_group += 1
-        if key_group in groups_to_compute_p:
-            index_group_for_stat += 1
+        if groups_to_compute_p is not None:
+            if key_group in groups_to_compute_p:
+                index_group_for_stat += 1
 
     if with_p_stat:
         output_dict["p"] = [""] * len(output_dict[""])
@@ -603,8 +682,189 @@ def create_table_1(entries_groups_dict, path_results, all_group_key="Tous", with
             output_dict["p"][line_index] = f"{res.pvalue:.4f}"
 
     df = pd.DataFrame(output_dict)
-    export_file_name = os.path.join(path_results, "these_alexis_table_1.csv")
+    export_file_name = os.path.join(path_results, f"these_alexis_table_{table_title}.csv")
     df.to_csv(export_file_name, encoding="utf-8", index=False)
+
+
+def plot_score_bars(entries_groups, path_results, score_ranges, score_labels, extra_filename="",
+                    all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
+                    without_count_in_y=True):
+    for mode_tous in [True, False]:
+        if exclude_group_all and mode_tous:
+            continue
+        entries_to_plot = list()
+        for group_label, asthma_entries in entries_groups.items():
+            if (not mode_tous) and group_label == all_group_key:
+                continue
+
+            entries_to_analyse = list(filter(lambda e: e.score_quality is not None, asthma_entries))
+
+            for asthma_entry in entries_to_analyse:
+                final_score_label = None
+                for score_range, score_label in zip(score_ranges, score_labels):
+                    if score_range[0] <= asthma_entry.score_quality <= score_range[1]:
+                        final_score_label = score_label
+                        break
+                entry_as_dict = {"score": final_score_label, "cohort_group": group_label}
+                entries_to_plot.append(entry_as_dict)
+
+        for mode_y in ["perc", "count"]:
+            if without_count_in_y and mode_y == "count":
+                continue
+            filename = f"asthma_score_bars_{extra_filename}_{mode_y}"
+            if mode_tous:
+                filename = f"asthma_score_bars_{extra_filename}_{mode_y}_avec_tous"
+            fct_by_level = [lambda e: e["cohort_group"], lambda e: e["score"]]
+            percentage_in_y = mode_y == "perc"
+            with_text = True
+            text_with_percentage = True
+            if mode_y == "perc":
+                y_label = "% patients"
+            else:
+                y_label = "# patients"
+            # might bug if the names change
+            sub_labels = score_labels
+            main_labels = list(entries_groups.keys())
+            if not mode_tous:
+                main_labels = list(filter(lambda label: label != all_group_key, main_labels))
+            plot_group_bar_chart_from_entries(entries=entries_to_plot, fct_by_level=fct_by_level,
+                                              filename=filename,
+                                              y_label=y_label,
+                                              with_text=with_text,
+                                              text_with_percentage=text_with_percentage,
+                                              main_labels=main_labels,
+                                              sub_labels=sub_labels,
+                                              background_color="white",
+                                              labels_color="black",
+                                              figsize=(18, 12),
+                                              percentage_in_y=percentage_in_y,
+                                              path_results=path_results,
+                                              save_formats=save_formats, dpi=dpi)
+
+
+def plot_control_bars(entries_groups, path_results, extra_filename="",
+                    all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
+                    without_count_in_y=True):
+    for mode_tous in [True, False]:
+        if exclude_group_all and mode_tous:
+            continue
+        entries_to_plot = list()
+        for group_label, asthma_entries in entries_groups.items():
+            if (not mode_tous) and group_label == all_group_key:
+                continue
+
+            for asthma_entry in asthma_entries:
+                if asthma_entry.well_controlled is None:
+                    continue
+                if asthma_entry.well_controlled:
+                    final_control_label = "Bien contrôlé"
+                elif asthma_entry.partly_controlled:
+                    final_control_label = "Partiellement contrôlé"
+                else:
+                    final_control_label = "Non contrôlé"
+
+                entry_as_dict = {"control": final_control_label, "cohort_group": group_label}
+                entries_to_plot.append(entry_as_dict)
+
+        for mode_y in ["perc", "count"]:
+            if without_count_in_y and mode_y == "count":
+                continue
+            filename = f"asthma_control_bars_{extra_filename}_{mode_y}"
+            if mode_tous:
+                filename = f"asthma_control_bars_{extra_filename}_{mode_y}_avec_tous"
+            fct_by_level = [lambda e: e["cohort_group"], lambda e: e["control"]]
+            percentage_in_y = mode_y == "perc"
+            with_text = True
+            text_with_percentage = True
+            if mode_y == "perc":
+                y_label = "% patients"
+            else:
+                y_label = "# patients"
+            # might bug if the names change
+            sub_labels = ["Bien contrôlé", "Partiellement contrôlé", "Non contrôlé"]
+            main_labels = list(entries_groups.keys())
+            if not mode_tous:
+                main_labels = list(filter(lambda label: label != all_group_key, main_labels))
+            plot_group_bar_chart_from_entries(entries=entries_to_plot, fct_by_level=fct_by_level,
+                                              filename=filename,
+                                              y_label=y_label,
+                                              with_text=with_text,
+                                              text_with_percentage=text_with_percentage,
+                                              main_labels=main_labels,
+                                              sub_labels=sub_labels,
+                                              background_color="white",
+                                              labels_color="black",
+                                              figsize=(18, 12),
+                                              percentage_in_y=percentage_in_y,
+                                              path_results=path_results,
+                                              save_formats=save_formats, dpi=dpi)
+
+
+def plot_suivi_bars(entries_groups, path_results, extra_filename="",
+                    all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
+                    without_count_in_y=True):
+    for mode_tous in [True, False]:
+        if exclude_group_all and mode_tous:
+            continue
+        entries_to_plot = list()
+        for group_label, asthma_entries in entries_groups.items():
+            if (not mode_tous) and group_label == all_group_key:
+                continue
+
+            for asthma_entry in asthma_entries:
+                if asthma_entry.suivi_medecin is None:
+                    continue
+                if asthma_entry.suivi_medecin is False:
+                    suivi_label = "Aucun suivi"
+                elif asthma_entry.suivi_pneumologue:
+                    suivi_label = "Suivi pneumologue"
+                elif asthma_entry.suivi_pediatre:
+                    suivi_label = "Suivi pédiatre"
+                elif asthma_entry.suivi_allergo:
+                    suivi_label = "Suivi allergologue"
+                elif asthma_entry.suivi_med_traitant:
+                    suivi_label = "Suivi généraliste"
+                elif asthma_entry.suivi_autre:
+                    suivi_label = "Suivi autre"
+                else:
+                    continue
+
+                entry_as_dict = {"suivi": suivi_label, "cohort_group": group_label}
+                entries_to_plot.append(entry_as_dict)
+
+        for mode_y in ["perc", "count"]:
+            if without_count_in_y and mode_y == "count":
+                continue
+            filename = f"asthma_suivi_bars_{extra_filename}_{mode_y}"
+            if mode_tous:
+                filename = f"asthma_suivi_bars_{extra_filename}_{mode_y}_avec_tous"
+            fct_by_level = [lambda e: e["cohort_group"], lambda e: e["suivi"]]
+            percentage_in_y = mode_y == "perc"
+            with_text = True
+            text_with_percentage = True
+            if mode_y == "perc":
+                y_label = "% patients"
+            else:
+                y_label = "# patients"
+            # might bug if the names change
+            sub_labels = ["Aucun suivi", "Suivi généraliste", "Suivi pneumologue",
+                          "Suivi pédiatre", "Suivi allergologue", "Suivi autre"]
+            main_labels = list(entries_groups.keys())
+            if not mode_tous:
+                main_labels = list(filter(lambda label: label != all_group_key, main_labels))
+            plot_group_bar_chart_from_entries(entries=entries_to_plot, fct_by_level=fct_by_level,
+                                              filename=filename,
+                                              y_label=y_label,
+                                              with_text=with_text,
+                                              text_with_percentage=text_with_percentage,
+                                              main_labels=main_labels,
+                                              sub_labels=sub_labels,
+                                              background_color="white",
+                                              labels_color="black",
+                                              figsize=(18, 12),
+                                              percentage_in_y=percentage_in_y,
+                                              path_results=path_results,
+                                              save_formats=save_formats, dpi=dpi)
 
 
 def create_table_2(path_result,asthma_entries):

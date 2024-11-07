@@ -394,6 +394,9 @@ class AsthmaEntry(AutoEntry):
         # ID used to identify this entry
         self.entry_id = self.iep
 
+        # used for some plots
+        self.group_label = None
+
         self.arrival_date = pd_series[fields_map["arrival_date"]]
         if entry is not None and (pd.isna(self.arrival_date) or self.arrival_date is None):
             self.arrival_date = entry.arrival_date
@@ -945,6 +948,39 @@ class AsthmaEntry(AutoEntry):
                 """
         self.score_quality = None
         self.measure_quality_score()
+
+        self.well_controlled = None
+        self.partly_controlled = None
+        self.uncontrolled = None
+        self.measure_asthma_control()
+
+    def measure_asthma_control(self):
+        n_items = 0
+
+        if self.controle_symptomes is None:
+            return
+        if self.controle_limitation_activite is None:
+            return
+        if self.controle_vento_plus_ou_1x_sem is None:
+            return
+        if self.controle_nuit is None:
+            return
+
+        n_items = sum([self.controle_symptomes, self.controle_limitation_activite,
+                       self.controle_vento_plus_ou_1x_sem, self.controle_nuit])
+
+        if n_items == 0:
+            self.well_controlled = True
+            self.partly_controlled = False
+            self.uncontrolled = False
+        elif n_items <= 2:
+            self.well_controlled = False
+            self.partly_controlled = True
+            self.uncontrolled = False
+        else:
+            self.well_controlled = False
+            self.partly_controlled = False
+            self.uncontrolled = True
 
     def measure_quality_score(self):
         self.score_quality = 0
