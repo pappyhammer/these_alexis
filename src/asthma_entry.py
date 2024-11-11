@@ -136,6 +136,7 @@ class AutoEntry(ABC):
             return False
         return self.entry_id == other.entry_id
 
+
     def set_ttt_attribute(self, attr_name, keywords, verbose=True, delay_attr=None, count_it=False,
                           with_associate_keyword=None):
         """
@@ -162,8 +163,9 @@ class AutoEntry(ABC):
 
         # prescription in urg and zhcd
         ttt_received_dicts = [self.entry.ttt_received_dict]
+        # zhcd dict contains the ttt given before in urg
         if self.entry.zhcd_entry is not None:
-            ttt_received_dicts.append(self.entry.zhcd_entry.ttt_received_dict)
+            ttt_received_dicts = [self.entry.zhcd_entry.ttt_received_dict]
 
         counter = 0
 
@@ -732,6 +734,11 @@ class AsthmaEntry(AutoEntry):
                     self.n_repet_series_vento_1 = False
                     self.n_repet_series_vento_2 = False
                     self.n_repet_series_vento_sup_3 = True
+        elif self.ttt_vento_avant_urgences is False:
+            self.n_repet_series_vento_0 = True
+            self.n_repet_series_vento_1 = False
+            self.n_repet_series_vento_2 = False
+            self.n_repet_series_vento_sup_3 = False
 
         self.n_respi_chbre_inhalation = pd_series[fields_map["n_respi_chbre_inhalation"]]
         self.set_str_attr('n_respi_chbre_inhalation')
@@ -888,6 +895,14 @@ class AsthmaEntry(AutoEntry):
         self.set_ttt_attribute(attr_name="n_nebu_atrovent", keywords=["atrovent"],
                                verbose=verbose_ttt, count_it=True)
 
+        self.atrovent_in_first_round = pd_series[fields_map["atrovent_in_first_round"]]
+        self.set_bool_attr('atrovent_in_first_round')
+        if self.entry is not None and self.atrovent_in_first_round is None and \
+                self.n_nebu_atrovent is not None and self.n_nebu_atrovent > 0 and \
+                self.n_nebu_salbu is not None and self.n_nebu_salbu > 0:
+            self.is_atrovent_in_first_round()
+
+
         self.pec_dechoc = pd_series[fields_map["pec_dechoc"]]
         self.set_bool_attr('pec_dechoc')
 
@@ -953,6 +968,74 @@ class AsthmaEntry(AutoEntry):
         self.partly_controlled = None
         self.uncontrolled = None
         self.measure_asthma_control()
+
+
+    def is_atrovent_in_first_round(self):
+        if not hasattr(self, 'entry'):
+            return
+
+        if self.entry is None:
+            return
+
+        # prescription in urg and zhcd
+        ttt_received_dicts = [self.entry.ttt_received_dict]
+        if self.entry.zhcd_entry is not None:
+            ttt_received_dicts = [self.entry.zhcd_entry.ttt_received_dict]
+
+        first_atrovent_date = None
+
+        for ttt_received_dict in ttt_received_dicts:
+            if len(ttt_received_dict) > 0:
+                for key_ttt, value_ttt in ttt_received_dict.items():
+                    # key_ttt (prescription_date, md_name, prescription)
+                    # value is a dict with key "voie" and la voie used, and "date" with value a list
+                    # of tuple (due_date, done_date)
+                    prescription_date, md_name, prescription = key_ttt
+                    if "atrovent" in unidecode(prescription).lower():
+                        list_dates = value_ttt["date"]
+                        if len(list_dates) > 0:
+                            # we take the first one prescribed
+                            if first_atrovent_date is None:
+                                first_atrovent_date = list_dates[0][1]
+                                break
+            if first_atrovent_date is not None:
+                break
+
+        if first_atrovent_date is None:
+            return
+
+        # date of the last of the first 3 salbu
+        last_salbu_1_series_date = None
+        keywords = ["ventoline 5mg/2,5ml", "ventoline <16kg et >10kg",
+                    "ventoline >16 kg",
+                    "ventoline <10kg",
+                    "salbutamol (sulfate) 5 mg/2,5 ml",
+                    "salbutamol (sulfate) 2,5 mg/2,5 ml"]
+        all_salbu_dates = []
+        for ttt_received_dict in ttt_received_dicts:
+            if len(ttt_received_dict) > 0:
+                for key_ttt, value_ttt in ttt_received_dict.items():
+                    # key_ttt (prescription_date, md_name, prescription)
+                    # value is a dict with key "voie" and la voie used, and "date" with value a list
+                    # of tuple (due_date, done_date)
+                    prescription_date, md_name, prescription = key_ttt
+                    for keyword in keywords:
+                        if keyword in unidecode(prescription).lower():
+                            list_dates = value_ttt["date"]
+                            if len(list_dates) > 0:
+                                all_salbu_dates.extend([date_tuple[1] for date_tuple in list_dates])
+
+        all_salbu_dates.sort()
+        # print(f"all_salbu_dates {all_salbu_dates}")
+
+        if len(all_salbu_dates) < 3:
+            return
+
+        if first_atrovent_date <= all_salbu_dates[2]:
+            self.atrovent_in_first_round = True
+        else:
+            self.atrovent_in_first_round = False
+
 
     def measure_asthma_control(self):
         n_items = 0

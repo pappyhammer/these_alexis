@@ -819,6 +819,8 @@ def plot_stacked_bar(data_dict,
                      x_ticks_label_size,
                      filename,
                      figsize=(12, 12),
+                     y_label_fontsize=30,
+                     legend_fontsize=25,
                      group_bars=False,
                      grouped_bar_order=None,
                      color_each_bar=False,
@@ -883,7 +885,9 @@ def plot_stacked_bar(data_dict,
     if x_ticks_colors_dict is None:
         x_ticks_colors_dict = dict()
 
-    rcParams.update({'figure.autolayout': True})
+    rcParams.update({'figure.autolayout': True,
+                     'font.weight': 'bold',
+                     'legend.fontsize': legend_fontsize})
 
     fig, axe_plot = plt.subplots(nrows=1, ncols=1,
                                  gridspec_kw={'height_ratios': [1]},
@@ -958,12 +962,19 @@ def plot_stacked_bar(data_dict,
                                 # no text if no bar
                                 continue
                             y_pos = np.sum(bar_values[:index_bar_value]) + (bar_values[index_bar_value] / 2)
-                            fontsize = 14
+                            if figsize[0] > figsize[1]:
+                                fontsize = 20
+                            else:
+                                fontsize = 15
                             if n_total_x_ticks_labels > 3:
                                 fontsize -= 1
                             if n_total_x_ticks_labels > 6:
-                                fontsize -= 5
-                            if n_total_x_ticks_labels > 20:
+                                fontsize -= 1
+                            if n_total_x_ticks_labels > 10:
+                                fontsize -= 3
+                            if n_total_x_ticks_labels > 17:
+                                fontsize -= 4
+                            if n_total_x_ticks_labels > 40:
                                 fontsize -= 3
                             plt.text(x=x_ticks_index, y=y_pos,
                                      s=str(bar_text),
@@ -1000,13 +1011,18 @@ def plot_stacked_bar(data_dict,
                         # no text if no bar
                         continue
                     y_pos = np.sum(bar_values[:index_bar_value]) + (bar_values[index_bar_value] / 2)
-                    fontsize = 14
+                    if figsize[0] > figsize[1]:
+                        fontsize = 20
+                    else:
+                        fontsize = 15
                     if len(x_ticks_labels) > 3:
                         fontsize -= 1
                     if len(x_ticks_labels) > 6:
-                        fontsize -= 5
-                    if len(x_ticks_labels) > 20:
+                        fontsize -= 1
+                    if len(x_ticks_labels) > 10:
                         fontsize -= 3
+                    if len(x_ticks_labels) > 17:
+                        fontsize -= 4
                     if len(x_ticks_labels) > 40:
                         fontsize -= 3
                     plt.text(x=x_ticks_index, y=y_pos,
@@ -1058,7 +1074,7 @@ def plot_stacked_bar(data_dict,
     # axe_plot.xaxis.set_ticks_position('none')
 
     axe_plot.yaxis.set_tick_params(labelsize=15)
-    plt.ylabel(y_label, fontweight="bold", fontsize=30, labelpad=20)
+    plt.ylabel(y_label, fontweight="bold", fontsize=y_label_fontsize, labelpad=20)
     if x_label is not None:
         axe_plot.set_xlabel(x_label, fontsize=30, labelpad=20)
     axe_plot.xaxis.label.set_color(labels_color)
