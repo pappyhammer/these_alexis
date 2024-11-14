@@ -136,7 +136,6 @@ class AutoEntry(ABC):
             return False
         return self.entry_id == other.entry_id
 
-
     def set_ttt_attribute(self, attr_name, keywords, verbose=True, delay_attr=None, count_it=False,
                           with_associate_keyword=None):
         """
@@ -705,14 +704,26 @@ class AsthmaEntry(AutoEntry):
         self.n_repet_series_vento_1 = None
         self.n_repet_series_vento_2 = None
         self.n_repet_series_vento_sup_3 = None
-        if self.n_repet_series_vento is not None:
+        if self.ttt_vento_avant_urgences is False:
+            self.n_repet_series_vento_0 = True
+            self.n_repet_series_vento_1 = False
+            self.n_repet_series_vento_2 = False
+            self.n_repet_series_vento_sup_3 = False
+        elif self.n_repet_series_vento is not None:
             try:
                 n_repet = int(self.n_repet_series_vento)
                 if n_repet == 0:
-                    self.n_repet_series_vento_0 = True
-                    self.n_repet_series_vento_1 = False
-                    self.n_repet_series_vento_2 = False
-                    self.n_repet_series_vento_sup_3 = False
+                    if self.ttt_vento_avant_urgences:
+                        # in that case at least one was given
+                        self.n_repet_series_vento_0 = False
+                        self.n_repet_series_vento_1 = True
+                        self.n_repet_series_vento_2 = False
+                        self.n_repet_series_vento_sup_3 = False
+                    else:
+                        self.n_repet_series_vento_0 = True
+                        self.n_repet_series_vento_1 = False
+                        self.n_repet_series_vento_2 = False
+                        self.n_repet_series_vento_sup_3 = False
                 elif n_repet == 1:
                     self.n_repet_series_vento_0 = False
                     self.n_repet_series_vento_1 = True
@@ -734,11 +745,7 @@ class AsthmaEntry(AutoEntry):
                     self.n_repet_series_vento_1 = False
                     self.n_repet_series_vento_2 = False
                     self.n_repet_series_vento_sup_3 = True
-        elif self.ttt_vento_avant_urgences is False:
-            self.n_repet_series_vento_0 = True
-            self.n_repet_series_vento_1 = False
-            self.n_repet_series_vento_2 = False
-            self.n_repet_series_vento_sup_3 = False
+
 
         self.n_respi_chbre_inhalation = pd_series[fields_map["n_respi_chbre_inhalation"]]
         self.set_str_attr('n_respi_chbre_inhalation')
@@ -901,7 +908,6 @@ class AsthmaEntry(AutoEntry):
                 self.n_nebu_atrovent is not None and self.n_nebu_atrovent > 0 and \
                 self.n_nebu_salbu is not None and self.n_nebu_salbu > 0:
             self.is_atrovent_in_first_round()
-
 
         self.pec_dechoc = pd_series[fields_map["pec_dechoc"]]
         self.set_bool_attr('pec_dechoc')

@@ -347,7 +347,7 @@ def main():
     age_labels = ["< 6 ans", "6 - 11 ans", "12 - 18 ans"]
     orientation_labels = ["RAD", "Hospit tradi", "Hospit réa"]
     score_labels = ["Score mauvais", "Score modéré", "Score bon", "Score parfait"]
-    control_labels = ["Bien contrôlé", "Partiellement contrôlé", "Non contrôlé"]
+    control_labels = ["Non contrôlé", "Partiellement contrôlé", "Bien contrôlé"]
     suivi_labels = ["Aucun suivi", "Pneumologue", "Pédiatre", "Allergologue", "Généraliste"]
     ttt_fond_labels = ["Aucun ttt de fond", "Flixotide", "Seretide"]
     efr_labels = ["Avec EFR", "Sans EFR"]
