@@ -138,7 +138,7 @@ def md_ranking(asthma_entries):
             f"Top {index_to_display + 1}: {mds[index_to_display]} avec {n_entries_by_md[index_to_display]} questionnaires")
 
 
-def plot_sao2_iao(all_entries, entries_groups_dict, path_results):
+def plot_sao2_iao(all_entries, entries_groups_dict, path_results, background_color):
     box_plot_dict = dict()
 
     for key_group, entries in entries_groups_dict.items():
@@ -173,7 +173,7 @@ def plot_sao2_iao(all_entries, entries_groups_dict, path_results):
                        y_ticks_locations=None,
                        y_ticks_labels=None,
                        median_color=None,
-                       background_color="white",
+                       background_color=background_color,
                        link_medians=None,
                        link_means=None,
                        link_data_points=None,
@@ -292,6 +292,10 @@ def main():
         else:
             run_exemples(path_results=path_results, asthma_entries=asthma_entries)
 
+    # presentation color
+    background_color = "#fffbea"
+    # background_color = "white"
+
     md_ranking(asthma_entries)
 
     all_group_key = "Effectif total"
@@ -366,7 +370,8 @@ def main():
                    with_p_stat=False,
                    groups_to_compute_p=groups_to_compute_p)
 
-    plot_sao2_iao(entries_groups_dict=entries_groups, path_results=path_results, all_entries=asthma_entries)
+    plot_sao2_iao(entries_groups_dict=entries_groups, path_results=path_results, all_entries=asthma_entries,
+                  background_color=background_color)
 
     bars_group_dict = {"ecole_asthme": ecole_asthme_labels,
                        "age": age_labels,
@@ -414,7 +419,8 @@ def main():
                             x_ticks_label_size=x_ticks_label_size, x_ticks_rotation_angle=x_ticks_rotation_angle,
                             extra_filename=extra_filename + f"_score_{score_type}",
                             score_ranges=score_ranges, score_labels=sub_score_labels,
-                            all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
+                            all_group_key=all_group_key, dpi=dpi, save_formats=save_formats,
+                            background_color=background_color)
     # controle
     bars_group_dict = {"ecole_asthme": ecole_asthme_labels,
                        "age": age_labels,
@@ -431,7 +437,7 @@ def main():
                           without_count_in_y=without_count_in_y,
                           x_ticks_label_size=x_ticks_label_size, x_ticks_rotation_angle=x_ticks_rotation_angle,
                           extra_filename=extra_filename,
-                          control_labels=control_labels,
+                          control_labels=control_labels, background_color=background_color,
                           all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
     # suivi
     bars_group_dict = {"ecole_asthme": ecole_asthme_labels,
@@ -449,7 +455,7 @@ def main():
         plot_suivi_bars(entries_groups=bars_entries_groups, path_results=path_results,
                         without_count_in_y=without_count_in_y,
                         x_ticks_label_size=x_ticks_label_size, x_ticks_rotation_angle=x_ticks_rotation_angle,
-                        extra_filename=extra_filename,
+                        extra_filename=extra_filename, background_color=background_color,
                         all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
 
     # EFR
@@ -462,7 +468,7 @@ def main():
         plot_efr_bars(entries_groups=bars_entries_groups, path_results=path_results,
                       without_count_in_y=without_count_in_y,
                       x_ticks_label_size=x_ticks_label_size, x_ticks_rotation_angle=x_ticks_rotation_angle,
-                      extra_filename=extra_filename,
+                      extra_filename=extra_filename, background_color=background_color,
                       all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
 
     # ttt de fond
@@ -476,7 +482,7 @@ def main():
               plot_name="ttt_fond",
               without_count_in_y=without_count_in_y,
               x_ticks_label_size=x_ticks_label_size, x_ticks_rotation_angle=x_ticks_rotation_angle,
-              extra_filename=extra_filename,
+              extra_filename=extra_filename, background_color=background_color,
               all_group_key=all_group_key, dpi=dpi, save_formats=save_formats)
 
 
@@ -846,7 +852,7 @@ def create_table_1(entries_groups_dict, path_results, table_title, all_group_key
 
 
 def plot_score_bars(entries_groups, path_results, score_ranges, score_labels,
-                    x_ticks_label_size, x_ticks_rotation_angle, extra_filename="",
+                    x_ticks_label_size, x_ticks_rotation_angle, background_color="white", extra_filename="",
                     all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
                     without_count_in_y=True):
     for mode_tous in [True, False]:
@@ -894,7 +900,7 @@ def plot_score_bars(entries_groups, path_results, score_ranges, score_labels,
                                               text_with_percentage=text_with_percentage,
                                               main_labels=main_labels,
                                               sub_labels=sub_labels,
-                                              background_color="white",
+                                              background_color=background_color,
                                               labels_color="black",
                                               figsize=(18, 12),
                                               x_ticks_label_size=x_ticks_label_size,
@@ -906,6 +912,7 @@ def plot_score_bars(entries_groups, path_results, score_ranges, score_labels,
 
 def plot_control_bars(entries_groups, path_results,
                       x_ticks_label_size, x_ticks_rotation_angle,
+                      background_color,
                       control_labels,
                       extra_filename="",
                       all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
@@ -957,7 +964,7 @@ def plot_control_bars(entries_groups, path_results,
                                               text_with_percentage=text_with_percentage,
                                               main_labels=main_labels,
                                               sub_labels=sub_labels,
-                                              background_color="white",
+                                              background_color=background_color,
                                               labels_color="black",
                                               figsize=(18, 12),
                                               x_ticks_label_size=x_ticks_label_size,
@@ -968,7 +975,7 @@ def plot_control_bars(entries_groups, path_results,
 
 
 def plot_suivi_bars(entries_groups, path_results,
-                    x_ticks_label_size, x_ticks_rotation_angle,
+                    x_ticks_label_size, x_ticks_rotation_angle, background_color,
                     extra_filename="",
                     all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
                     without_count_in_y=True):
@@ -1028,7 +1035,7 @@ def plot_suivi_bars(entries_groups, path_results,
                                               text_with_percentage=text_with_percentage,
                                               main_labels=main_labels,
                                               sub_labels=sub_labels,
-                                              background_color="white",
+                                              background_color=background_color,
                                               labels_color="black",
                                               figsize=(18, 12),
                                               x_ticks_label_size=x_ticks_label_size,
@@ -1039,7 +1046,7 @@ def plot_suivi_bars(entries_groups, path_results,
 
 
 def plot_efr_bars(entries_groups, path_results,
-                  x_ticks_label_size, x_ticks_rotation_angle,
+                  x_ticks_label_size, x_ticks_rotation_angle, background_color,
                   extra_filename="",
                   all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
                   without_count_in_y=True):
@@ -1090,7 +1097,7 @@ def plot_efr_bars(entries_groups, path_results,
                                               text_with_percentage=text_with_percentage,
                                               main_labels=main_labels,
                                               sub_labels=sub_labels,
-                                              background_color="white",
+                                              background_color=background_color,
                                               labels_color="black",
                                               figsize=(18, 12),
                                               x_ticks_label_size=x_ticks_label_size,
@@ -1102,7 +1109,7 @@ def plot_efr_bars(entries_groups, path_results,
 
 def plot_bars(entries_groups, path_results,
               sub_labels, labels_to_fct_dict,
-              plot_name,
+              plot_name, background_color,
               x_ticks_label_size, x_ticks_rotation_angle,
               extra_filename="",
               all_group_key="Tous", dpi=700, save_formats="png", exclude_group_all=True,
@@ -1171,7 +1178,7 @@ def plot_bars(entries_groups, path_results,
                                               text_with_percentage=text_with_percentage,
                                               main_labels=main_labels,
                                               sub_labels=sub_labels,
-                                              background_color="white",
+                                              background_color=background_color,
                                               labels_color="black",
                                               figsize=(18, 12),
                                               x_ticks_label_size=x_ticks_label_size,
